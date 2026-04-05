@@ -1,0 +1,2289 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🛡️ כיפת ברזל מתמטית</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif; }
+canvas { display:block; }
+
+#answerPanel {
+  position:fixed; bottom:22px; left:50%; transform:translateX(-50%);
+  display:none; align-items:center; gap:18px;
+  background:rgba(0,8,2,.82); border:2px solid rgba(0,220,120,.55);
+  border-radius:40px; padding:12px 32px;
+  box-shadow:0 0 30px rgba(0,200,100,.25);
+  z-index:30; direction:rtl;
+}
+#answerLabel { color:#ffdd00; font-size:19px; font-weight:bold; white-space:nowrap; }
+#answerInput {
+  width:110px; font-size:22px; font-weight:bold; text-align:center;
+  background:rgba(0,40,15,.9); border:2px solid rgba(0,220,120,.8);
+  border-radius:16px; color:#00ff88; outline:none; padding:7px 12px; direction:ltr;
+  caret-color:#00ff88;
+}
+#answerInput:focus { border-color:#00ff88; box-shadow:0 0 12px rgba(0,255,136,.4); }
+#answerInput.wrong { border-color:#ff4444; box-shadow:0 0 12px rgba(255,68,68,.4); animation:shake .3s; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+
+#overlay {
+  position:fixed; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:18px;
+  background:rgba(0,4,1,.9); z-index:50; direction:rtl;
+}
+#overlay h1 { font-size:clamp(32px,5vw,58px); color:#00ff88; text-shadow:0 0 24px #00ff88; text-align:center; }
+#overlay h2 { font-size:clamp(24px,4vw,42px); color:#ffdd00; text-align:center; }
+#overlay p  { color:#ccc; font-size:clamp(13px,1.8vw,18px); text-align:center; max-width:520px; line-height:1.6; }
+.grade-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:6px; }
+.grade-btn {
+  padding:16px 22px; font-size:clamp(14px,2vw,18px); font-weight:bold;
+  border:2px solid rgba(0,220,120,.55); border-radius:16px;
+  background:rgba(0,35,15,.85); color:#00ff88; cursor:pointer;
+  transition:all .15s; text-align:center; direction:rtl; line-height:1.5;
+}
+.grade-btn:hover { background:rgba(0,70,30,.9); border-color:#00ff88; box-shadow:0 0 16px rgba(0,255,136,.3); }
+.grade-btn small { display:block; color:#888; font-size:12px; font-weight:normal; margin-top:3px; }
+.big-btn {
+  padding:15px 40px; font-size:clamp(15px,2vw,20px); font-weight:bold;
+  border:none; border-radius:30px; cursor:pointer; color:#fff; margin-top:6px;
+  transition:transform .1s, box-shadow .1s;
+}
+.big-btn:hover { transform:scale(1.05); }
+.btn-green { background:linear-gradient(135deg,#00cc66,#007744); box-shadow:0 0 20px rgba(0,200,100,.4); }
+.btn-gray  { background:linear-gradient(135deg,#445533,#223322); }
+.country-badge {
+  font-size:clamp(60px,10vw,110px); filter:drop-shadow(0 0 20px rgba(255,200,0,.6));
+  animation:bounce .8s infinite alternate;
+}
+@keyframes bounce { from{transform:scale(1)} to{transform:scale(1.08)} }
+.lb-table { width:360px; background:rgba(0,0,0,.5); border-radius:14px; padding:12px 16px; }
+.lb-row { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,.07); font-size:14px; color:#ccc; }
+.lb-row.gold { color:#ffd700; font-weight:bold; }
+.lb-row.silver { color:#aaa; font-weight:bold; }
+.lb-row.bronze { color:#cd7f32; font-weight:bold; }
+.lb-rank { width:30px; }
+.lb-name { flex:1; }
+.lb-score { color:#00ff88; }
+
+#backBtn { position:fixed; top:16px; right:16px; padding:8px 20px; font-size:.9rem; background:rgba(0,120,60,.25); border:1px solid rgba(0,200,100,.5); color:#0f8; border-radius:20px; cursor:pointer; z-index:999; text-decoration:none; }
+#backBtn:hover { background:rgba(0,120,60,.45); }
+
+/* ── Shop overlay ── */
+#shopOverlay {
+  position:fixed; inset:0; background:rgba(2,4,20,.97);
+  display:none; z-index:300; direction:rtl; overflow-y:auto;
+  padding:20px clamp(12px,4vw,44px) 48px;
+}
+.shop-title { text-align:center; font-size:clamp(22px,3.5vw,38px); color:#ffd700; text-shadow:0 0 22px #ffd700; margin-bottom:4px; }
+.shop-coins { text-align:center; font-size:16px; color:#ffe880; margin-bottom:22px; }
+.shop-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:14px; max-width:960px; margin:0 auto; }
+.shop-card {
+  background:rgba(8,16,36,.85); border:2px solid rgba(100,150,255,.2);
+  border-radius:14px; padding:18px 14px 14px; text-align:center;
+  display:flex; flex-direction:column; gap:6px; transition:border-color .15s;
+}
+.shop-card:hover { border-color:rgba(150,200,255,.4); }
+.shop-icon { font-size:38px; margin-bottom:2px; }
+.shop-name { font-size:15px; color:#ddeeff; font-weight:bold; }
+.shop-desc { font-size:12px; color:#7a9ab8; line-height:1.55; flex:1; }
+.shop-cost { font-size:13px; color:#ffd700; font-weight:bold; margin-top:4px; }
+.shop-level { font-size:11px; color:#60886a; margin-bottom:2px; }
+.shop-btn { padding:8px 16px; font-size:13px; font-weight:bold; border:none; border-radius:18px; cursor:pointer; margin-top:2px; transition:transform .1s; }
+.shop-btn.can-buy { background:linear-gradient(135deg,#ffd700,#cc9900); color:#1a1000; }
+.shop-btn.can-buy:hover { transform:scale(1.05); }
+.shop-btn.maxed { background:#223; color:#557; cursor:default; }
+.shop-btn.no-coins { background:#221a00; color:#665500; cursor:default; }
+.shop-section { max-width:960px; margin:22px auto 10px; font-size:13px; color:#6080a0; text-align:center; }
+/* ── Shop in-game button ── */
+#shopBtn {
+  position:fixed; top:108px; right:16px;
+  padding:5px 12px; font-size:.78rem;
+  background:rgba(60,40,0,.35); border:1px solid rgba(255,200,0,.35);
+  color:#ffcc44; border-radius:14px; cursor:pointer; z-index:999;
+  display:none; text-decoration:none; transition:background .15s;
+}
+#shopBtn:hover { background:rgba(80,60,0,.55); }
+
+/* ── Encyclopedia button (below back btn) ── */
+#encBtn {
+  position:fixed; top:62px; right:16px;
+  padding:6px 14px; font-size:.82rem;
+  background:rgba(20,60,120,.35); border:1px solid rgba(100,160,255,.4);
+  color:#88ccff; border-radius:16px; cursor:pointer; z-index:999;
+  text-decoration:none; transition:background .15s;
+}
+#encBtn:hover { background:rgba(20,60,160,.55); }
+
+/* ── Encyclopedia overlay ── */
+#encOverlay {
+  position:fixed; inset:0; background:rgba(0,4,12,.96);
+  display:none; z-index:300; direction:rtl; overflow-y:auto;
+  padding:20px clamp(12px,4vw,40px) 40px;
+}
+.enc-close {
+  position:sticky; top:10px; left:0; float:left;
+  padding:8px 20px; background:rgba(0,60,30,.4);
+  border:1px solid rgba(0,200,100,.4); color:#0f8;
+  border-radius:16px; cursor:pointer; font-size:.9rem; z-index:10;
+}
+.enc-close:hover { background:rgba(0,100,50,.6); }
+.enc-title {
+  text-align:center; font-size:clamp(24px,4vw,40px);
+  color:#00ccff; text-shadow:0 0 20px #00ccff; margin-bottom:6px;
+}
+.enc-subtitle { text-align:center; color:#888; font-size:14px; margin-bottom:28px; }
+.enc-section-title {
+  font-size:20px; color:#ffdd00; margin:22px 0 14px;
+  border-bottom:1px solid rgba(255,200,0,.2); padding-bottom:6px;
+}
+.enc-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
+.enc-card {
+  background:rgba(0,10,30,.8); border:1px solid rgba(100,180,255,.15);
+  border-radius:14px; padding:14px 16px; position:relative;
+}
+.enc-card.missile { border-color:rgba(255,100,60,.2); }
+.enc-card.system  { border-color:rgba(0,200,120,.2); }
+.enc-card-emoji { font-size:32px; margin-bottom:6px; }
+.enc-card-name { font-size:17px; font-weight:bold; color:#fff; margin-bottom:2px; }
+.enc-card-sub  { font-size:12px; color:#888; margin-bottom:8px; }
+.enc-card-desc { font-size:13px; color:#bbb; line-height:1.7; }
+.enc-stat-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.enc-chip {
+  padding:3px 10px; border-radius:10px; font-size:11px;
+  background:rgba(255,255,255,.06); color:#ccc; border:1px solid rgba(255,255,255,.1);
+}
+.enc-chip.danger { background:rgba(255,60,0,.12); color:#ff8866; border-color:rgba(255,100,50,.25); }
+.enc-chip.green  { background:rgba(0,200,100,.1); color:#00ff88; border-color:rgba(0,200,100,.2); }
+
+/* ── Siren — below the HUD bar ── */
+#siren {
+  position:fixed; top:40px; left:0; right:0; height:34px;
+  display:none; flex-direction:row;
+  align-items:center; justify-content:center; gap:14px;
+  z-index:19; padding:0 16px; pointer-events:none;
+  animation:sirenBG .4s ease-in-out infinite alternate;
+}
+@keyframes sirenBG {
+  0%  { background:rgba(200,0,0,.32); box-shadow:0 2px 18px rgba(255,0,0,.35); }
+  100%{ background:rgba(120,0,0,.08); box-shadow:none; }
+}
+#sirenLight {
+  width:20px; height:20px; border-radius:50%; flex-shrink:0;
+  animation:sirenPulse .4s ease-out infinite alternate;
+}
+@keyframes sirenPulse {
+  0%  { background:#ff0000; box-shadow:0 0 12px 4px rgba(255,0,0,.95); }
+  100%{ background:#ff5555; box-shadow:0 0 4px 1px rgba(255,0,0,.2); }
+}
+#sirenBar { display:none; }
+#sirenText {
+  color:#ff3333; font-size:13px; font-weight:bold; letter-spacing:4px;
+  text-shadow:0 0 8px #ff0000; animation:sirenTextFlash .4s infinite alternate;
+}
+@keyframes sirenTextFlash {
+  0%  { opacity:1; }
+  100%{ opacity:.35; }
+}
+
+/* ── Missile list panel (right side) ── */
+#missilePanel {
+  position:fixed; top:106px; right:0;
+  background:rgba(0,6,2,.88); border-left:2px solid rgba(0,180,80,.35);
+  border-radius:10px 0 0 10px;
+  padding:8px 10px 10px; display:none;
+  z-index:18; min-width:168px; max-width:210px;
+  direction:rtl; max-height:calc(100vh - 100px); overflow-y:auto;
+}
+#missilePanel h5 {
+  color:#ffdd00; font-size:11px; font-weight:bold;
+  text-align:center; margin-bottom:6px; letter-spacing:1px;
+}
+.mp-row {
+  display:flex; align-items:center; gap:7px;
+  padding:4px 6px; margin-bottom:3px;
+  background:rgba(255,255,255,.04); border-radius:6px;
+  border-right:3px solid #fff; font-size:13px;
+  transition:background .2s;
+}
+.mp-row.intercepted { opacity:.45; }
+.mp-emoji { font-size:15px; flex-shrink:0; }
+.mp-q { font-weight:bold; flex:1; }
+.mp-tag { font-size:11px; flex-shrink:0; }
+
+/* ── In-game leaderboard ── */
+#inGameLB {
+  position:fixed; top:60px; left:0;
+  background:rgba(0,8,2,.85); border:1px solid rgba(0,200,100,.3);
+  border-right:2px solid rgba(0,200,100,.5); border-radius:0 10px 10px 0;
+  padding:10px 12px; display:none; z-index:20; direction:rtl;
+  min-width:150px;
+}
+#inGameLB h4 { color:#ffdd00; font-size:12px; margin-bottom:6px; text-align:center; }
+.ig-row { display:flex; justify-content:space-between; gap:8px; font-size:11px; color:#aaa; padding:2px 0; border-bottom:1px solid rgba(255,255,255,.05); }
+.ig-row:last-child { border-bottom:none; }
+.ig-row .ig-score { color:#00ff88; }
+
+/* ── F-35 Airstrike power-up (left side) ── */
+#airstrikePanel {
+  position:fixed; left:14px; top:50%; transform:translateY(-50%);
+  display:none; flex-direction:column; align-items:center; gap:8px;
+  z-index:25; pointer-events:none;
+}
+#airstrikeBarWrap {
+  width:22px; height:160px; background:rgba(0,0,0,.55);
+  border:1px solid rgba(100,200,255,.3); border-radius:11px; overflow:hidden;
+  position:relative;
+}
+#airstrikeBarFill {
+  position:absolute; bottom:0; left:0; right:0;
+  background:linear-gradient(to top, #00aaff, #aaddff);
+  transition:height .35s; border-radius:0 0 10px 10px;
+}
+#airstrikeLabel {
+  font-size:9px; color:#aaddff; letter-spacing:1px;
+  writing-mode:vertical-rl; text-orientation:mixed;
+  text-shadow:0 0 6px #00aaff;
+}
+#airstrikeBtn {
+  width:54px; height:54px; border-radius:50%;
+  background:radial-gradient(circle, #003377, #001133);
+  border:2px solid rgba(100,180,255,.4);
+  display:none; flex-direction:column; align-items:center; justify-content:center;
+  cursor:pointer; pointer-events:all;
+  font-size:24px; line-height:1;
+  transition:transform .1s, box-shadow .1s;
+  box-shadow:0 0 14px rgba(0,150,255,.35);
+  animation:airstrikeGlow 1s infinite alternate;
+}
+#airstrikeBtn:hover { transform:scale(1.1); box-shadow:0 0 28px rgba(0,180,255,.7); }
+@keyframes airstrikeGlow {
+  0%  { box-shadow:0 0 12px rgba(0,150,255,.4); border-color:rgba(100,200,255,.5); }
+  100%{ box-shadow:0 0 30px rgba(0,180,255,.85); border-color:rgba(150,220,255,.9); }
+}
+#airstrikeSub { font-size:9px; color:#88bbff; text-align:center; max-width:60px; }
+
+/* ── Airstrike sweep visual ── */
+#airstrikeSweep {
+  position:fixed; inset:0; pointer-events:none; z-index:80; display:none;
+  background:linear-gradient(90deg, rgba(0,150,255,0) 0%, rgba(0,200,255,.18) 50%, rgba(0,150,255,0) 100%);
+  animation:sweepMove .6s linear forwards;
+}
+@keyframes sweepMove {
+  0%  { transform:translateX(-100%); opacity:1; }
+  100%{ transform:translateX(100%); opacity:0; }
+}
+
+/* ── Settings button ── */
+#settingsBtn {
+  position:fixed; top:6px; left:16px; width:32px; height:32px;
+  background:rgba(0,60,30,.4); border:1px solid rgba(0,200,100,.4);
+  color:#0f8; border-radius:50%; cursor:pointer; z-index:999;
+  font-size:16px; display:none; align-items:center; justify-content:center;
+  transition:background .15s;
+}
+#settingsBtn:hover { background:rgba(0,100,50,.6); }
+
+/* ── Settings overlay ── */
+#settingsOverlay {
+  position:fixed; inset:0; background:rgba(0,5,2,.92);
+  display:none; flex-direction:column; align-items:center; justify-content:center;
+  gap:20px; z-index:200; direction:rtl;
+}
+#settingsOverlay h2 { color:#00ff88; font-size:28px; }
+.setting-row {
+  display:flex; align-items:center; gap:16px; font-size:16px; color:#ccc;
+}
+.toggle-wrap {
+  display:flex; background:rgba(0,0,0,.5); border:1px solid rgba(0,200,100,.3);
+  border-radius:30px; overflow:hidden; cursor:pointer;
+}
+.toggle-opt {
+  padding:9px 22px; font-size:14px; font-weight:bold; color:#666;
+  transition:all .2s; white-space:nowrap;
+}
+.toggle-opt.active { background:rgba(0,180,80,.25); color:#00ff88; }
+
+/* ── Multiple-choice answer panel ── */
+#choicePanel {
+  position:fixed; bottom:22px; left:50%; transform:translateX(-50%);
+  display:none; gap:12px; z-index:30;
+}
+.choice-btn {
+  padding:14px 26px; font-size:22px; font-weight:bold;
+  background:rgba(0,30,15,.9); border:2px solid rgba(0,200,100,.5);
+  color:#00ff88; border-radius:16px; cursor:pointer;
+  transition:all .12s; min-width:80px; text-align:center;
+  direction:ltr;
+}
+.choice-btn:hover { background:rgba(0,80,40,.9); border-color:#00ff88; box-shadow:0 0 14px rgba(0,255,136,.3); transform:scale(1.06); }
+.choice-btn.wrong-flash { border-color:#ff4444; background:rgba(80,0,0,.8); animation:shake .3s; }
+.choice-btn.correct-flash { border-color:#00ff88; background:rgba(0,100,40,.8); }
+
+#levelBanner {
+  position:fixed; top:0; left:0; right:0; display:none;
+  justify-content:center; align-items:center; gap:12px;
+  background:rgba(0,0,0,.6); padding:8px 20px; z-index:20;
+  direction:rtl; font-size:clamp(13px,1.8vw,17px);
+}
+#progressWrap { height:6px; width:200px; background:rgba(255,255,255,.15); border-radius:4px; overflow:hidden; }
+#progressBar  { height:100%; background:linear-gradient(90deg,#00ff88,#00cc66); border-radius:4px; transition:width .3s; }
+#livesRow     { display:flex; gap:4px; align-items:center; font-size:18px; }
+#scoreVal     { color:#ffdd00; font-weight:bold; font-size:20px; }
+#levelName    { color:#00ff88; font-weight:bold; }
+
+/* ── Pause overlay ── */
+#pauseOverlay {
+  position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+  flex-direction:column; gap:12px; z-index:150; pointer-events:none;
+  background:rgba(0,6,2,.72);
+}
+#pauseText {
+  font-size:clamp(32px,6vw,60px); color:#00ff88; font-weight:bold;
+  text-shadow:0 0 28px #00ff88; animation:pausePulse 1.2s infinite alternate;
+}
+@keyframes pausePulse { 0%{opacity:1;transform:scale(1)} 100%{opacity:.55;transform:scale(.97)} }
+#pauseSub { font-size:clamp(13px,2vw,18px); color:#88cc88; direction:rtl; }
+
+/* ── Mobile responsive ── */
+@media (max-width: 640px) {
+  /* ── TOP BUTTON BAR: all in one horizontal row below HUD ── */
+  /* During gameplay the HUD banner is ~34px tall, so buttons sit at top:36px */
+  #backBtn {
+    top:36px; right:8px; left:auto;
+    padding:4px 10px; font-size:.7rem; border-radius:14px;
+  }
+  #settingsBtn {
+    top:36px; left:8px; width:28px; height:28px; font-size:13px;
+  }
+  #encBtn {
+    top:36px; right:auto; left:44px;
+    padding:4px 9px; font-size:.7rem; border-radius:12px;
+  }
+  #shopBtn {
+    top:36px; right:auto; left:130px;
+    padding:4px 9px; font-size:.7rem; border-radius:12px;
+  }
+
+  /* Hide heavy side panels on small screens */
+  #missilePanel { display:none !important; }
+  #inGameLB { display:none !important; }
+
+  /* HUD bar — single compact line, no wrapping */
+  #levelBanner {
+    flex-wrap:nowrap; overflow:hidden;
+    padding:6px 8px; gap:6px; font-size:11px;
+    white-space:nowrap;
+  }
+  #progressWrap { width:70px; flex-shrink:0; }
+  #scoreVal { font-size:13px; }
+  #livesRow { font-size:12px; flex-shrink:0; }
+  #levelName { font-size:11px; overflow:hidden; text-overflow:ellipsis; max-width:80px; }
+  #progressLabel { display:none; }
+
+  /* Answer panel (type mode) */
+  #answerPanel { padding:8px 14px; gap:8px; bottom:12px; border-radius:28px; }
+  #answerInput { width:80px; font-size:20px; padding:6px 8px; }
+  #answerLabel { font-size:13px; }
+
+  /* ── Choice buttons: single row, stretch to fill width ── */
+  #choicePanel {
+    flex-wrap:nowrap;           /* force single row */
+    gap:6px;
+    bottom:12px;
+    left:8px; right:8px;
+    transform:none;             /* override the translateX(-50%) */
+    width:auto;
+  }
+  .choice-btn {
+    flex:1;                     /* each button takes equal share */
+    padding:18px 4px;
+    font-size:20px;
+    min-width:0;                /* allow shrinking */
+    border-radius:14px;
+  }
+
+  /* Shop + encyclopedia grids */
+  .shop-grid { grid-template-columns:1fr 1fr; }
+  .enc-cards { grid-template-columns:1fr; }
+
+  /* F-35 airstrike bar: thinner */
+  #airstrikePanel { left:4px; }
+  #airstrikeBarWrap { width:16px; height:100px; }
+  #airstrikeSub { font-size:8px; }
+
+  /* Main menu */
+  .grade-grid { grid-template-columns:1fr 1fr; gap:10px; }
+  .grade-btn { padding:12px 10px; font-size:13px; }
+  .big-btn { padding:12px 24px; font-size:15px; }
+}
+
+/* Extra small phones */
+@media (max-width: 380px) {
+  .choice-btn { font-size:18px; padding:16px 2px; }
+  .shop-grid { grid-template-columns:1fr; }
+  #encBtn { left:40px; }
+  #shopBtn { left:118px; }
+}
+</style>
+</head>
+<body>
+<a href="index.html" id="backBtn">🏠 חזרה לתפריט</a>
+<button id="encBtn">📖 אנציקלופדיה</button>
+<button id="shopBtn">🛒 חנות</button>
+
+<!-- Shop overlay (dynamic content) -->
+<div id="shopOverlay"></div>
+
+<!-- Encyclopedia overlay -->
+<div id="encOverlay">
+  <button class="enc-close" id="encClose">✖ סגור</button>
+  <div style="clear:both"></div>
+  <div class="enc-title">📖 אנציקלופדיה — כיפת ברזל</div>
+  <div class="enc-subtitle">כל מה שצריך לדעת על הטילים ומערכות ההגנה</div>
+
+  <div class="enc-section-title">🚀 טילים — לפי שלב</div>
+  <div class="enc-cards">
+
+    <div class="enc-card missile">
+      <div class="enc-card-emoji">🇵🇸</div>
+      <div class="enc-card-name">קסאם — עזה</div>
+      <div class="enc-card-sub">שלב 1 | Qassam Rocket</div>
+      <div class="enc-card-desc">טיל תוצרת בית פשוט המיוצר ברצועת עזה מצינורות מתכת וחומרי נפץ ביתיים. אין לו מערכת כוונון — הוא נורה בכיוון כללי ופוגע בהסתברות.</div>
+      <div class="enc-stat-row">
+        <span class="enc-chip">טווח: 3–45 ק"מ</span>
+        <span class="enc-chip">מטען: 0.5–10 ק"ג</span>
+        <span class="enc-chip danger">סיכון: נמוך–בינוני</span>
+      </div>
+    </div>
+
+    <div class="enc-card missile">
+      <div class="enc-card-emoji">🇾🇪</div>
+      <div class="enc-card-name">זלזל / בליסטי — תימן</div>
+      <div class="enc-card-sub">שלב 2 | Zelzal / Badr Ballistic</div>
+      <div class="enc-card-desc">טילים בליסטיים ארוכי טווח שהוברחו מאיראן לחות'ים. מסוגלים להגיע לכל רחבי ישראל. לוקח להם זמן להגיע — אך עצמתם גדולה.</div>
+      <div class="enc-stat-row">
+        <span class="enc-chip">טווח: 500–2,000 ק"מ</span>
+        <span class="enc-chip">מטען: עד 200 ק"ג</span>
+        <span class="enc-chip danger">סיכון: גבוה</span>
+      </div>
+    </div>
+
+    <div class="enc-card missile">
+      <div class="enc-card-emoji">☪️</div>
+      <div class="enc-card-name">פאג'ר / קטיושה — חיזבאללה</div>
+      <div class="enc-card-sub">שלב 3 | Fajr / Katyusha</div>
+      <div class="enc-card-desc">ארסנל מגוון הכולל קטיושות ישנות, פאג'ר-5 עם טווח 75 ק"מ, ורקטות M-600 מדויקות. חיזבאללה מחזיק למעלה מ-150,000 רקטות.</div>
+      <div class="enc-stat-row">
+        <span class="enc-chip">טווח: 20–300 ק"מ</span>
+        <span class="enc-chip">מטען: עד 175 ק"ג</span>
+        <span class="enc-chip danger">סיכון: גבוה מאוד</span>
+      </div>
+    </div>
+
+    <div class="enc-card missile">
+      <div class="enc-card-emoji">🇮🇷</div>
+      <div class="enc-card-name">שהאב / קיאם — איראן</div>
+      <div class="enc-card-sub">שלב 4 | Shahab / Qaim</div>
+      <div class="enc-card-desc">טילים בליסטיים אסטרטגיים עם ראשי נפץ מדויקים. גרסאות מתקדמות יכולות לנשוא ראש גרעיני. זמן הטיסה לישראל — כ-12 דקות.</div>
+      <div class="enc-stat-row">
+        <span class="enc-chip">טווח: 1,300–2,500 ק"מ</span>
+        <span class="enc-chip">מטען: עד 750 ק"ג</span>
+        <span class="enc-chip danger">סיכון: קריטי</span>
+      </div>
+    </div>
+
+    <div class="enc-card missile" style="border-color:rgba(100,140,180,.35)">
+      <div class="enc-card-emoji">🚁</div>
+      <div class="enc-card-name">מזלטים — UAV</div>
+      <div class="enc-card-sub">שלב 5 | Kamikaze Drone</div>
+      <div class="enc-card-desc">מזלטים מתאבדים זולים ויעילים — קשה לזהות על מסכי רדאר. טסים לאט אבל מגיעים בגלים. התרגילים קשים יותר, אבל יש לך יותר זמן לחשוב.</div>
+      <div class="enc-stat-row">
+        <span class="enc-chip">מהירות: איטית מאוד</span>
+        <span class="enc-chip">גלים: רבים</span>
+        <span class="enc-chip danger">תרגיל: קשה</span>
+      </div>
+    </div>
+
+    <div class="enc-card missile" style="border-color:rgba(0,100,255,.35)">
+      <div class="enc-card-emoji">🇫🇷🥖</div>
+      <div class="enc-card-name">באגט — צרפת (בונוס)</div>
+      <div class="enc-card-sub">שלב 6 | Missile Baguette</div>
+      <div class="enc-card-desc">שלב בונוס מסתורי. צרפת מסיבות שאינן ברורות החליטה להשתתף. הטיל עשוי בעיקר מקמח, חמאה ומעט ביקורת תרבותית.</div>
+      <div class="enc-stat-row">
+        <span class="enc-chip">טווח: ♾️ (בונוס)</span>
+        <span class="enc-chip">מהירות: הכי מהיר</span>
+        <span class="enc-chip green">קריר מאוד</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="enc-section-title">🛡️ מערכות ההגנה — כיפת ברזל</div>
+  <div class="enc-cards">
+
+    <div class="enc-card system">
+      <div class="enc-card-emoji">📡</div>
+      <div class="enc-card-name">רדאר EL/M-2084</div>
+      <div class="enc-card-sub">מערכת זיהוי והתראה | AESA Radar</div>
+      <div class="enc-card-desc">רדאר מערך פازי מתקדם מתוצרת אלתא. מזהה שיגור טיל בתוך שניות, מחשב מסלול ונקודת נפילה, ומחליט אם כדאי ליירט. מכסה 360° ועד 500 ק"מ.</div>
+      <div class="enc-stat-row">
+        <span class="enc-chip green">זמן זיהוי: &lt;4 שניות</span>
+        <span class="enc-chip">טווח: 500 ק"מ</span>
+      </div>
+    </div>
+
+    <div class="enc-card system">
+      <div class="enc-card-emoji">🎯</div>
+      <div class="enc-card-name">מיירט תמיר (Tamir)</div>
+      <div class="enc-card-sub">טיל יירוט | Tamir Interceptor</div>
+      <div class="enc-card-desc">הטיל שמבצע את היירוט בפועל. משוגר מהמשגר, מכוון אל מסלול הטיל האויב ומתפוצץ קרוב אליו (Fragmentation Kill). מהירות: מאך 2.5. עלות: כ-50,000 דולר לטיל.</div>
+      <div class="enc-stat-row">
+        <span class="enc-chip">מהירות: מאך 2.5</span>
+        <span class="enc-chip green">שיעור יירוט: ~90%</span>
+        <span class="enc-chip">עלות: $50K</span>
+      </div>
+    </div>
+
+    <div class="enc-card system">
+      <div class="enc-card-emoji">🚀</div>
+      <div class="enc-card-name">משגר כיפת ברזל</div>
+      <div class="enc-card-sub">יחידת שיגור | Launch Unit</div>
+      <div class="enc-card-desc">כל יחידת שיגור מכילה 20 טילי תמיר מוכנים לשיגור מיידי. הרכב הצבאי עמיד לפגיעה ויכול לפרוס בשטח פתוח תוך דקות. ניתן להפעלה מרחוק.</div>
+      <div class="enc-stat-row">
+        <span class="enc-chip green">20 טילים בכל משגר</span>
+        <span class="enc-chip">פריסה: &lt;5 דקות</span>
+      </div>
+    </div>
+
+    <div class="enc-card system">
+      <div class="enc-card-emoji">🖥️</div>
+      <div class="enc-card-name">בקר קרב (BMC)</div>
+      <div class="enc-card-sub">מרכז ניהול | Battle Management</div>
+      <div class="enc-card-desc">המוח של המערכת. מקבל נתוני רדאר, מחשב סיכויי פגיעה ואם הטיל יפגע באזור מיושב, ומחליט אוטומטית אם לשגר מיירט. הכל בתוך שניות ספורות.</div>
+      <div class="enc-stat-row">
+        <span class="enc-chip green">החלטה: &lt;2 שניות</span>
+        <span class="enc-chip">אוטומטי / ידני</span>
+      </div>
+    </div>
+
+    <div class="enc-card system">
+      <div class="enc-card-emoji">✈️</div>
+      <div class="enc-card-name">F-35I "אדיר"</div>
+      <div class="enc-card-sub">כוח אווירי לגיבוי | Air Support</div>
+      <div class="enc-card-desc">מטוס הסטלת' המתקדם ביותר בעולם, בגרסה ישראלית ייחודית. יכול לנטרל שיגורי טילים עוד לפני שהם יוצאים מהשטח האויב — הגנה בשכבה הראשונה.</div>
+      <div class="enc-stat-row">
+        <span class="enc-chip green">סטלת' מלא</span>
+        <span class="enc-chip">מהירות: מאך 1.6</span>
+        <span class="enc-chip danger">כוח אש עצום</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<canvas id="c"></canvas>
+
+<!-- Siren (left side) -->
+<div id="siren">
+  <div id="sirenLight"></div>
+  <div id="sirenBar"></div>
+  <div id="sirenText">אזעקה</div>
+</div>
+
+<!-- F-35 Airstrike power-up -->
+<div id="airstrikePanel">
+  <div id="airstrikeBarWrap"><div id="airstrikeBarFill" style="height:0%"></div></div>
+  <div id="airstrikeLabel">F-35</div>
+  <div id="airstrikeBtn" title="הפעל תקיפה אווירית!">✈️</div>
+  <div id="airstrikeSub">תקיפה</div>
+</div>
+<div id="airstrikeSweep"></div>
+
+<!-- Pause overlay -->
+<div id="pauseOverlay">
+  <div id="pauseText">⏸ מושהה</div>
+  <div id="pauseSub">המשחק מושהה — סגור כדי להמשיך</div>
+</div>
+
+<!-- Settings button -->
+<button id="settingsBtn" title="הגדרות">⚙️</button>
+
+<!-- Settings overlay -->
+<div id="settingsOverlay">
+  <h2>⚙️ הגדרות</h2>
+  <div class="setting-row">
+    <span>מצב תשובה:</span>
+    <div class="toggle-wrap" id="modeToggle">
+      <div class="toggle-opt active" data-mode="type">⌨️ הקלדה</div>
+      <div class="toggle-opt" data-mode="choice">🔘 בחירה מ-4</div>
+    </div>
+  </div>
+  <button class="big-btn btn-green" id="closeSettings" style="margin-top:10px">✔ סגור</button>
+</div>
+
+<!-- Multiple choice panel -->
+<div id="choicePanel"></div>
+
+<!-- Missile list panel (right) -->
+<div id="missilePanel">
+  <h5>🚀 טילים פעילים</h5>
+  <div id="mpRows"></div>
+</div>
+
+<!-- In-game leaderboard -->
+<div id="inGameLB">
+  <h4>🏆 שיאנים</h4>
+  <div id="igRows"></div>
+</div>
+
+<!-- Level HUD -->
+<div id="levelBanner">
+  <div id="livesRow"></div>
+  <span style="color:#aaa">|</span>
+  <span>⭐ <span id="scoreVal">0</span></span>
+  <span style="color:#aaa">|</span>
+  <span>💰 <span id="coinVal">0</span></span>
+  <span style="color:#aaa">|</span>
+  <span id="levelName">שלב 1</span>
+  <span style="color:#aaa">|</span>
+  <div id="progressWrap"><div id="progressBar" style="width:0%"></div></div>
+  <span id="progressLabel" style="color:#aaa;font-size:12px">0/10</span>
+</div>
+
+<!-- Answer panel -->
+<div id="answerPanel">
+  <span id="answerLabel">🎯 הכנס תשובה:</span>
+  <input id="answerInput" type="number" placeholder="?" min="0" max="9999" autocomplete="off">
+</div>
+
+<!-- Main overlay (menu/intro/gameover) -->
+<div id="overlay">
+  <!-- filled by JS -->
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  CANVAS SETUP – FULL SCREEN
+// ═══════════════════════════════════════════════════════
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let W, H, GROUND_Y, DOME_X, DOME_Y, BUILDINGS = [];
+
+function resize(){
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  GROUND_Y = H - 90;
+  DOME_X   = W * 0.5;
+  DOME_Y   = GROUND_Y - 18;
+  genBuildings();
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ═══════════════════════════════════════════════════════
+//  LEVELS
+// ═══════════════════════════════════════════════════════
+const LEVEL_DEFS = [
+  { id:1, name:'עזה',        emoji:'🇵🇸', col:'#e07020', dark:'#803810', quota:10, baseSpeed:0.65, maxScreen:2, spawnMs:5200, from:'bottom-right', intro:'ברכות, לוחם! טילי קסאם יוצאים מעזה.\nפתור את התרגילים כדי ליירט אותם!' },
+  { id:2, name:'תימן',       emoji:'🇾🇪', col:'#8b1a45', dark:'#4a0e25', quota:12, baseSpeed:0.85, maxScreen:3, spawnMs:4600, from:'far-left',     intro:'שים לב! טילים בליסטיים מגיעים מתימן.\nהם עפים רחוק — לוקח להם זמן להגיע!' },
+  { id:3, name:'חיזבאללה',   emoji:'☪️',  col:'#1a7a18', dark:'#0e4210', quota:14, baseSpeed:1.05, maxScreen:4, spawnMs:4000, from:'top-right',    intro:'חיזבאללה ירתה צרור טילים מלבנון!\nהם מגיעים מזוויות שונות — היה מהיר!' },
+  { id:4, name:'איראן',       emoji:'🇮🇷', col:'#cc2200', dark:'#771100', quota:16, baseSpeed:1.28, maxScreen:5, spawnMs:3400, from:'far-right',    intro:'אזעקה! שיגור טילים בליסטיים מאיראן.\nהגנת ישראל בידייך — אל תטעה!' },
+  { id:5, name:'מזלטים',     emoji:'🚁',  col:'#778899', dark:'#334455', quota:18, baseSpeed:0.40, maxScreen:7, spawnMs:2400, from:'all',        intro:'גלי מזלטים מציפים את השמיים!\nהם טסים לאט — יש לך יותר זמן לחשוב.\nאבל התרגילים קשים יותר!', drone:true },
+  { id:6, name:'צרפת 🥖',    emoji:'🇫🇷', col:'#1a3acc', dark:'#0e1f88', quota:Infinity, baseSpeed:1.55, maxScreen:6, spawnMs:2800, from:'all', intro:'Sacré bleu! הם שולחים...\nצרפת?! שלב בונוס — שרוד כמה שיותר!', bonus:true },
+];
+
+// ═══════════════════════════════════════════════════════
+//  SHOP — UPGRADES
+// ═══════════════════════════════════════════════════════
+let coins = parseInt(localStorage.getItem('idc') || '0');
+const upgrades = { arrow3:0, ironBeam:0, extraLife:0, doubleShot:0, slowMissile:0 };
+(function loadShop(){
+  const s = JSON.parse(localStorage.getItem('idu') || '{}');
+  Object.assign(upgrades, s);
+})();
+function saveShop(){ localStorage.setItem('idc',coins); localStorage.setItem('idu',JSON.stringify(upgrades)); }
+
+const SHOP_ITEMS = [
+  { id:'arrow3',     icon:'🚀', name:'חץ 3',        desc:'מיירט אוטומטית טיל אחד בתחילת כל שלב', costs:[150,200,280], max:3 },
+  { id:'ironBeam',   icon:'⚡', name:'קרן ברזל',    desc:'לייזר שהורס כל טיל שמגיע קרוב לקרקע', costs:[220,350],     max:2 },
+  { id:'extraLife',  icon:'💚', name:'חיים נוספים', desc:'+1 חיים בתחילת כל משחק (עד 8)',           costs:[80,110,150],  max:3 },
+  { id:'doubleShot', icon:'🎯', name:'יירוט כפול',  desc:'כל תשובה נכונה מיירטת גם את הטיל הבא',   costs:[130],        max:1 },
+  { id:'slowMissile',icon:'🐢', name:'האטת טילים',  desc:'כל הטילים עפים לאט יותר ב-18%',           costs:[170],        max:1 },
+];
+
+function showShop(fromGame=false){
+  const so = document.getElementById('shopOverlay');
+  so.style.display='block';
+  so.innerHTML = `
+    <button class="enc-close" onclick="closeShop()">✕ סגור</button>
+    <div style="clear:both"></div>
+    <div class="shop-title">🛒 חנות שדרוגים — כיפת ברזל</div>
+    <div class="shop-coins">💰 מטבעות: <strong id="coinDisplay">${coins}</strong> &nbsp;|&nbsp; <span style="color:#88aa88;font-size:12px">מרוויח 8 💰 על כל יירוט</span></div>
+    <div class="shop-grid">
+      ${SHOP_ITEMS.map(item=>{
+        const lvl = upgrades[item.id];
+        const maxed = lvl >= item.max;
+        const cost = item.costs[lvl] ?? 0;
+        const canAfford = !maxed && coins >= cost;
+        const btnCls = maxed ? 'maxed' : canAfford ? 'can-buy' : 'no-coins';
+        const btnTxt = maxed ? '✅ רמה מקסימלית'
+                     : canAfford ? `🛒 קנה (${cost} 💰)`
+                     : `${cost} 💰 — אין מספיק`;
+        return `<div class="shop-card">
+          <div class="shop-icon">${item.icon}</div>
+          <div class="shop-name">${item.name}</div>
+          <div class="shop-desc">${item.desc}</div>
+          <div class="shop-level">רמה נוכחית: ${lvl} / ${item.max}</div>
+          ${!maxed?`<div class="shop-cost">עלות: ${cost} 💰</div>`:''}
+          <button class="shop-btn ${btnCls}" ${maxed||!canAfford?'disabled':''} onclick="buyUpgrade('${item.id}')">
+            ${btnTxt}
+          </button>
+        </div>`;
+      }).join('')}
+    </div>
+    <p class="shop-section">מטבעות נשמרים בין משחקים · שדרוגים פעילים בכל שלב</p>`;
+}
+
+function buyUpgrade(id){
+  const item = SHOP_ITEMS.find(i=>i.id===id);
+  if(!item) return;
+  const lvl = upgrades[id];
+  if(lvl >= item.max) return;
+  const cost = item.costs[lvl];
+  if(coins < cost) return;
+  coins -= cost;
+  upgrades[id] = lvl + 1;
+  saveShop();
+  showShop(); // refresh shop without resuming
+}
+
+function closeShop(){
+  document.getElementById('shopOverlay').style.display = 'none';
+  resumeGame();
+}
+
+// ═══════════════════════════════════════════════════════
+//  MATH GENERATORS
+// ═══════════════════════════════════════════════════════
+const GRADES = {
+  gan: { label:'🌱 גן',        desc:'חיבור וחיסור עד 10',    genQ(){ return addSub(1,9); } },
+  a:   { label:'📚 כיתה א׳',   desc:'חיבור וחיסור עד 20',    genQ(){ return Math.random()<.75?addSub(1,19):mulSimple(); } },
+  b:   { label:'🔢 כיתה ב׳',   desc:'כפל וחשבון עד 100',     genQ(){ return Math.random()<.5?addSub(10,99):mulFull(); } },
+  c:   { label:'🧮 כיתה ג׳',   desc:'כפל וחילוק מלא',        genQ(){ const r=Math.random(); return r<.25?addSub(10,99):r<.6?mulFull():divQ(); } },
+};
+// Drone level — harder questions (2-step / squares)
+function droneQ(){
+  const r=Math.random();
+  if(r<0.28){ const a=2+Math.floor(Math.random()*9),b=2+Math.floor(Math.random()*9); return {q:`${a} × ${b}`,ans:a*b}; }
+  if(r<0.52){ const b=2+Math.floor(Math.random()*8),n=2+Math.floor(Math.random()*9); return {q:`${b*n} ÷ ${b}`,ans:n}; }
+  if(r<0.72){ const a=2+Math.floor(Math.random()*7),b=2+Math.floor(Math.random()*7),c=2+Math.floor(Math.random()*5); return {q:`(${a}+${b})×${c}`,ans:(a+b)*c}; }
+  const a=3+Math.floor(Math.random()*9); return {q:`${a}²`,ans:a*a};
+}
+
+function addSub(lo,hi){
+  const a=lo+Math.floor(Math.random()*(hi-lo+1));
+  const b=lo+Math.floor(Math.random()*(hi-lo+1));
+  if(a>=b) return {q:`${a} + ${b}`, ans:a+b};
+  return {q:`${a+b} - ${b}`, ans:a};
+}
+function mulSimple(){ const t=[2,5,10][Math.floor(Math.random()*3)], n=1+Math.floor(Math.random()*9); return {q:`${t} × ${n}`,ans:t*n}; }
+function mulFull(){   const t=2+Math.floor(Math.random()*9), n=1+Math.floor(Math.random()*9); return {q:`${t} × ${n}`,ans:t*n}; }
+function divQ(){      const b=2+Math.floor(Math.random()*8), n=1+Math.floor(Math.random()*9); return {q:`${b*n} ÷ ${b}`,ans:n}; }
+
+// ═══════════════════════════════════════════════════════
+//  STAR BACKGROUND
+// ═══════════════════════════════════════════════════════
+let STARS = [];
+function genStars(){
+  STARS = Array.from({length:200},()=>({
+    x:Math.random()*W, y:Math.random()*(GROUND_Y-30),
+    r:Math.random()*1.8+.2, op:.15+Math.random()*.75,
+    tw:Math.random()*Math.PI*2
+  }));
+}
+
+// ═══════════════════════════════════════════════════════
+//  BUILDINGS (Israeli city skyline)
+// ═══════════════════════════════════════════════════════
+function genBuildings(){
+  BUILDINGS = [];
+  let x = 0;
+  while(x < W){
+    const w = 30 + Math.floor(Math.random()*55);
+    const h = 40 + Math.floor(Math.random()*110);
+    const type = Math.random()<.15 ? 'dome' : 'rect';
+    const wins = [];
+    for(let i=0;i<Math.floor(h/18)*Math.floor(w/14);i++) wins.push(Math.random()>.35);
+    BUILDINGS.push({x,w,h,type,wins,damage:0});
+    x += w + 2 + Math.floor(Math.random()*6);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════════════
+let gPhase='menu';    // menu|intro|play|levelclear|gameover
+let gamePaused=false;
+let gradeKey='', grade=null, levelIdx=0, levelDef=null;
+let missiles=[], interceptors=[], explosions=[], floatTexts=[];
+let score=0, lives=5, levelHits=0, spawnTimer=0, animId=null;
+// Launcher
+let armAngle  = -Math.PI*.45;
+let armTarget = -Math.PI*.45;
+let armRecoil = 0;
+let missileId = 0;
+// Mouse/keyboard aim
+let mouseX = 0, mouseY = 0, mouseOnCanvas = false;
+let keyLeft = false, keyRight = false;
+// Power-up
+let airstrikeCharge = 0;   // 0–100
+let airstrikeUsed   = false;
+// Settings
+let answerMode = 'type';   // 'type' | 'choice'
+
+// ═══════════════════════════════════════════════════════
+//  DOM
+// ═══════════════════════════════════════════════════════
+const overlay      = document.getElementById('overlay');
+const answerPanel  = document.getElementById('answerPanel');
+const aInput       = document.getElementById('answerInput');
+const levelBanner  = document.getElementById('levelBanner');
+const scoreValEl   = document.getElementById('scoreVal');
+const livesRowEl   = document.getElementById('livesRow');
+const levelNameEl  = document.getElementById('levelName');
+const progressBar  = document.getElementById('progressBar');
+const progressLbl  = document.getElementById('progressLabel');
+const sirenEl        = document.getElementById('siren');
+const inGameLBEl     = document.getElementById('inGameLB');
+const igRowsEl       = document.getElementById('igRows');
+const missilePanelEl   = document.getElementById('missilePanel');
+const encOverlay       = document.getElementById('encOverlay');
+document.getElementById('encBtn').addEventListener('click',()=>{ pauseGame(); encOverlay.style.display='block'; });
+document.getElementById('encClose').addEventListener('click',()=>{ encOverlay.style.display='none'; resumeGame(); });
+const shopBtnEl = document.getElementById('shopBtn');
+shopBtnEl.addEventListener('click',()=>{ pauseGame(); showShop(true); });
+const mpRowsEl         = document.getElementById('mpRows');
+const airstrikePanel   = document.getElementById('airstrikePanel');
+const airstrikeBarFill = document.getElementById('airstrikeBarFill');
+const airstrikeBtn     = document.getElementById('airstrikeBtn');
+const airstrikeSweep   = document.getElementById('airstrikeSweep');
+const settingsBtn      = document.getElementById('settingsBtn');
+const settingsOverlay  = document.getElementById('settingsOverlay');
+const choicePanel      = document.getElementById('choicePanel');
+
+// ═══════════════════════════════════════════════════════
+//  MOUSE / KEYBOARD LAUNCHER CONTROL
+// ═══════════════════════════════════════════════════════
+canvas.addEventListener('mousemove', e => {
+  const r = canvas.getBoundingClientRect();
+  mouseX = e.clientX - r.left;
+  mouseY = e.clientY - r.top;
+  mouseOnCanvas = true;
+});
+canvas.addEventListener('mouseleave', () => { mouseOnCanvas = false; });
+
+// Touch events — aim launcher on mobile
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const r = canvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  mouseX = touch.clientX - r.left;
+  mouseY = touch.clientY - r.top;
+  mouseOnCanvas = true;
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const r = canvas.getBoundingClientRect();
+  const touch = e.touches[0];
+  mouseX = touch.clientX - r.left;
+  mouseY = touch.clientY - r.top;
+  mouseOnCanvas = true;
+}, { passive: false });
+canvas.addEventListener('touchend', () => { mouseOnCanvas = false; });
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'ArrowLeft')  { keyLeft  = true; e.preventDefault(); }
+  if(e.key === 'ArrowRight') { keyRight = true; e.preventDefault(); }
+});
+document.addEventListener('keyup', e => {
+  if(e.key === 'ArrowLeft')  keyLeft  = false;
+  if(e.key === 'ArrowRight') keyRight = false;
+});
+
+// ═══════════════════════════════════════════════════════
+//  INPUT
+// ═══════════════════════════════════════════════════════
+aInput.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){ submitAnswer(); }
+  if(e.key==='ArrowUp'||e.key==='ArrowDown') e.preventDefault();
+});
+
+function submitAnswer(){
+  const v = parseInt(aInput.value, 10);
+  if(isNaN(v)){ flashWrong(); return; }
+  // Find all missiles with this answer
+  const matching = missiles.filter(m=>m.ans===v && !m.destroyed && !m.intercepted);
+  if(matching.length===0){ flashWrong(); return; }
+  // Hit most dangerous (closest to bottom)
+  matching.sort((a,b)=>b.y-a.y);
+  fireInterceptor(matching[0]);
+  aInput.value='';
+}
+
+function flashWrong(){
+  aInput.classList.add('wrong');
+  setTimeout(()=>aInput.classList.remove('wrong'),350);
+}
+
+// ═══════════════════════════════════════════════════════
+//  LEADERBOARD (localStorage)
+// ═══════════════════════════════════════════════════════
+const LB_KEY='ironDomeMathLB';
+function getLB(){ try{ return JSON.parse(localStorage.getItem(LB_KEY))||[]; }catch{ return []; } }
+function saveLB(lb){ localStorage.setItem(LB_KEY,JSON.stringify(lb)); }
+function addLBEntry(name,sc,g){ const lb=getLB(); lb.push({name,score:sc,grade:g}); lb.sort((a,b)=>b.score-a.score); const t=lb.slice(0,10); saveLB(t); return t; }
+function isTopTen(sc){ const lb=getLB(); return lb.length<10||sc>lb[lb.length-1].score; }
+
+function renderLB(highlightScore=null){
+  const lb=getLB();
+  if(!lb.length) return '<p style="color:#555;text-align:center">אין שיאים עדיין</p>';
+  const medals=['🥇','🥈','🥉'];
+  const rowClass=i=>i===0?'gold':i===1?'silver':i===2?'bronze':'';
+  return `<div class="lb-table"><div style="color:#ffdd00;font-size:16px;font-weight:bold;text-align:center;margin-bottom:8px">🏆 טבלת מובילים</div>`+
+    lb.map((e,i)=>`<div class="lb-row ${rowClass(i)}">
+      <span class="lb-rank">${medals[i]||`${i+1}.`}</span>
+      <span class="lb-name">${e.name}</span>
+      <span style="color:#aaa;font-size:12px">${e.grade}</span>
+      <span class="lb-score">${e.score.toLocaleString()}</span>
+    </div>`).join('')+'</div>';
+}
+
+// ═══════════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════════
+settingsBtn.addEventListener('click', () => {
+  pauseGame();
+  settingsOverlay.style.display = 'flex';
+  aInput.blur();
+});
+document.getElementById('closeSettings').addEventListener('click', () => {
+  settingsOverlay.style.display = 'none';
+  resumeGame();
+  if(answerMode==='type') aInput.focus();
+  else renderChoiceButtons();
+});
+document.getElementById('modeToggle').addEventListener('click', e => {
+  const opt = e.target.closest('.toggle-opt');
+  if(!opt) return;
+  answerMode = opt.dataset.mode;
+  document.querySelectorAll('.toggle-opt').forEach(o => o.classList.toggle('active', o.dataset.mode===answerMode));
+  applyAnswerMode();
+});
+
+function applyAnswerMode(){
+  if(gPhase !== 'play') return;
+  if(answerMode === 'type'){
+    answerPanel.style.display = 'flex';
+    choicePanel.style.display = 'none';
+    aInput.focus();
+  } else {
+    answerPanel.style.display = 'none';
+    choicePanel.style.display = 'flex';
+    renderChoiceButtons();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  MULTIPLE CHOICE
+// ═══════════════════════════════════════════════════════
+function generateDistractors(ans){
+  const set = new Set([ans]);
+  const range = Math.max(5, Math.round(Math.abs(ans)*0.6 + 3));
+  let attempts = 0;
+  while(set.size < 4 && attempts < 60){
+    attempts++;
+    const delta = Math.floor(Math.random()*range)+1;
+    const cand  = Math.random()<.5 ? ans+delta : Math.max(0, ans-delta);
+    if(cand !== ans && cand >= 0) set.add(cand);
+  }
+  return shuffle([...set]);
+}
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+
+function renderChoiceButtons(){
+  if(answerMode !== 'choice') return;
+  const active = missiles.filter(m=>!m.destroyed && !m.intercepted);
+  if(!active.length){ choicePanel.innerHTML=''; return; }
+  active.sort((a,b)=>b.y-a.y);
+  const target = active[0];
+  const opts = generateDistractors(target.ans);
+  choicePanel.innerHTML = opts.map(v =>
+    `<button class="choice-btn" data-val="${v}">${v}</button>`
+  ).join('');
+  choicePanel.querySelectorAll('.choice-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleChoiceClick(parseInt(btn.dataset.val)));
+  });
+}
+
+function handleChoiceClick(v){
+  const matching = missiles.filter(m=>m.ans===v && !m.destroyed && !m.intercepted);
+  if(matching.length === 0){
+    // Flash all wrong
+    choicePanel.querySelectorAll('.choice-btn').forEach(b => {
+      if(parseInt(b.dataset.val)===v){ b.classList.add('wrong-flash'); setTimeout(()=>b.classList.remove('wrong-flash'),350); }
+    });
+    return;
+  }
+  matching.sort((a,b)=>b.y-a.y);
+  fireInterceptor(matching[0]);
+  // Flash correct briefly then regenerate
+  choicePanel.querySelectorAll('.choice-btn').forEach(b => {
+    if(parseInt(b.dataset.val)===v) b.classList.add('correct-flash');
+  });
+  setTimeout(renderChoiceButtons, 300);
+}
+
+// ═══════════════════════════════════════════════════════
+//  F-35 AIRSTRIKE POWER-UP
+// ═══════════════════════════════════════════════════════
+function gainAirstrikeCharge(amount = 12){
+  if(airstrikeUsed) return;
+  airstrikeCharge = Math.min(100, airstrikeCharge + amount);
+  airstrikeBarFill.style.height = airstrikeCharge + '%';
+  if(airstrikeCharge >= 100){
+    airstrikeBtn.style.display = 'flex';
+    airstrikePanel.querySelector('#airstrikeSub').style.color = '#00aaff';
+  }
+}
+
+function resetAirstrikeUI(){
+  airstrikeCharge = 0;
+  airstrikeUsed   = false;
+  airstrikeBarFill.style.height = '0%';
+  airstrikeBtn.style.display = 'none';
+  airstrikePanel.querySelector('#airstrikeSub').style.color = '#88bbff';
+}
+
+function activateAirstrike(){
+  if(airstrikeCharge < 100 || airstrikeUsed || gPhase !== 'play') return;
+  airstrikeUsed = true;
+  airstrikeBtn.style.display = 'none';
+
+  // Visual sweep
+  airstrikeSweep.style.display = 'block';
+  setTimeout(()=>{ airstrikeSweep.style.display='none'; }, 700);
+
+  // Float text
+  floatTexts.push({x:W/2, y:H/2-60, text:'✈️ F-35 — מחסל הכל!', life:1.2, col:'#00ccff'});
+
+  // Destroy all active missiles with explosions
+  missiles.forEach(m => {
+    if(!m.destroyed){
+      const bonus = Math.max(5, 60-Math.floor((Date.now()-m.spawnTime)/250));
+      score += bonus; levelHits++;
+      explosions.push({x:m.x, y:m.y, r:0, maxR:80+Math.random()*40, life:1, col:'#00aaff'});
+      m.destroyed = true;
+    }
+  });
+  interceptors = [];
+  updateHUD();
+  if(!levelDef.bonus && levelHits >= levelDef.quota) setTimeout(checkLevelDone, 600);
+
+  // Drain bar
+  airstrikeBarFill.style.height = '0%';
+  airstrikeCharge = 0;
+  setTimeout(renderChoiceButtons, 400);
+}
+
+airstrikeBtn.addEventListener('click', activateAirstrike);
+
+// ═══════════════════════════════════════════════════════
+//  MISSILE PANEL (right side live list)
+// ═══════════════════════════════════════════════════════
+function updateMissilePanel(){
+  const active = missiles.filter(m => !m.destroyed);
+  active.sort((a,b) => b.y - a.y); // most dangerous first
+
+  if(!active.length){
+    mpRowsEl.innerHTML = '<div style="color:#555;font-size:11px;text-align:center;padding:4px">אין טילים</div>';
+    return;
+  }
+  mpRowsEl.innerHTML = active.map(m => {
+    const pct = Math.max(0, Math.min(1, m.y / GROUND_Y));
+    const dangerCol = pct > 0.7 ? '#ff4444' : pct > 0.4 ? '#ffaa00' : '#ddffdd';
+    const isIntercepted = m.intercepted;
+    return `<div class="mp-row ${isIntercepted?'intercepted':''}" style="border-right-color:${m.col}">
+      <span class="mp-emoji">${m.emoji}</span>
+      <span class="mp-q" style="color:${dangerCol}">${m.q}</span>
+      ${isIntercepted ? '<span class="mp-tag">🎯</span>' : ''}
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+//  SIREN
+// ═══════════════════════════════════════════════════════
+let sirenTimer = null;
+function triggerSiren(){
+  sirenEl.style.display = 'flex';
+  if(sirenTimer) clearTimeout(sirenTimer);
+  sirenTimer = setTimeout(() => { sirenEl.style.display = 'none'; }, 1800);
+}
+
+// ═══════════════════════════════════════════════════════
+//  IN-GAME LEADERBOARD
+// ═══════════════════════════════════════════════════════
+function refreshInGameLB(){
+  const lb = getLB().slice(0, 5);
+  if(!lb.length){ igRowsEl.innerHTML = '<div style="color:#555;font-size:11px;text-align:center">אין שיאים</div>'; return; }
+  const medals = ['🥇','🥈','🥉','4.','5.'];
+  igRowsEl.innerHTML = lb.map((e,i) =>
+    `<div class="ig-row"><span>${medals[i]} ${e.name}</span><span class="ig-score">${e.score.toLocaleString()}</span></div>`
+  ).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+//  SCREENS
+// ═══════════════════════════════════════════════════════
+function showMenu(){
+  gPhase='menu';
+  cancelAnimationFrame(animId);
+  answerPanel.style.display='none';
+  levelBanner.style.display='none';
+  shopBtnEl.style.display='none';
+  overlay.style.display='flex';
+  overlay.innerHTML=`
+    <h1>🛡️ כיפת ברזל מתמטית</h1>
+    <p>בחר רמת קושי ועצור את הטילים! כל תשובה נכונה מיירטת טיל.</p>
+    <div class="grade-grid">
+      <button class="grade-btn" data-g="gan">🌱 גן<small>חיבור וחיסור עד 10</small></button>
+      <button class="grade-btn" data-g="a">📚 כיתה א׳<small>חיבור וחיסור עד 20</small></button>
+      <button class="grade-btn" data-g="b">🔢 כיתה ב׳<small>כפל וחשבון עד 100</small></button>
+      <button class="grade-btn" data-g="c">🧮 כיתה ג׳<small>כפל וחילוק מלא</small></button>
+    </div>
+    <button class="big-btn" style="background:linear-gradient(135deg,#886600,#553300);box-shadow:0 0 20px rgba(200,150,0,.3);margin-top:4px" id="menuShopBtn">🛒 חנות שדרוגים &nbsp;<span style="color:#ffd700">💰 ${coins}</span></button>
+    ${renderLB()}`;
+  overlay.querySelectorAll('.grade-btn').forEach(btn=>
+    btn.addEventListener('click',()=>selectGrade(btn.dataset.g)));
+  document.getElementById('menuShopBtn')?.addEventListener('click',()=>showShop(false));
+  animId=requestAnimationFrame(bgLoop);
+}
+
+function selectGrade(key){
+  gradeKey=key; grade=GRADES[key];
+  levelIdx=0;
+  showLevelIntro();
+}
+
+function showLevelIntro(){
+  levelDef=LEVEL_DEFS[levelIdx];
+  gPhase='intro';
+  overlay.style.display='flex';
+  overlay.innerHTML=`
+    <div class="country-badge">${levelDef.emoji}</div>
+    <h2>שלב ${levelDef.id}: ${levelDef.name}</h2>
+    <p style="white-space:pre-line">${levelDef.intro}</p>
+    ${levelDef.bonus?'<p style="color:#ffaa00;font-size:22px">שלב בונוס — שרוד כמה שיותר!</p>':'<p style="color:#aaa;font-size:14px">עליך ליירט '+levelDef.quota+' טילים כדי לעבור לשלב הבא</p>'}
+    <button class="big-btn btn-green" id="startLevel">${levelDef.bonus?'⚡ קדימה!':'🚀 התחל שלב!'}</button>`;
+  document.getElementById('startLevel').addEventListener('click',()=>startLevel());
+}
+
+function showLevelClear(){
+  gPhase='levelclear';
+  overlay.style.display='flex';
+  overlay.innerHTML=`
+    <h2 style="color:#00ff88">✅ שלב ${levelDef.id} הושלם!</h2>
+    <p>ניקוד עכשיו: <span style="color:#ffdd00;font-size:24px">${score.toLocaleString()}</span></p>
+    <p style="color:#aaa">עובר לשלב הבא...</p>`;
+  answerPanel.style.display='none';
+  choicePanel.style.display='none';
+  missilePanelEl.style.display='none';
+  missiles=[]; interceptors=[]; floatTexts=[]; explosions=[];
+  setTimeout(()=>{ levelIdx++; showLevelIntro(); },2200);
+}
+
+function showGameOver(win=false){
+  gPhase='gameover';
+  cancelAnimationFrame(animId);
+  answerPanel.style.display='none';
+  levelBanner.style.display='none';
+  inGameLBEl.style.display='none';
+  missilePanelEl.style.display='none';
+  airstrikePanel.style.display='none';
+  settingsBtn.style.display='none';
+  shopBtnEl.style.display='none';
+  choicePanel.style.display='none';
+  missiles=[]; interceptors=[]; explosions=[];
+  const qualified=isTopTen(score);
+  overlay.style.display='flex';
+  overlay.innerHTML=`
+    <h2 style="color:${win?'#00ff88':'#ff4444'}">${win?'🏅 ניצחת! עברת את כל השלבים!':'💥 המשחק נגמר!'}</h2>
+    <p>ניקוד סופי: <span style="color:#ffdd00;font-size:28px">${score.toLocaleString()}</span></p>
+    <p style="color:#aaa">הגעת לשלב ${levelDef?.id||1} (${levelDef?.name||''}) • ${grade?.label||''}</p>
+    ${qualified?`<div id="nameArea" style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:4px">
+      <p style="color:#ffdd00">🏆 נכנסת לטבלת המובילים! מה שמך?</p>
+      <input id="nameInput" type="text" maxlength="18" placeholder="שם..." style="padding:10px 18px;font-size:18px;border-radius:20px;border:2px solid #00ff88;background:rgba(0,30,15,.9);color:#fff;outline:none;text-align:center;direction:rtl">
+      <button class="big-btn btn-green" id="saveName">✔ שמור</button>
+    </div>`:''}
+    ${renderLB(score)}
+    <div style="display:flex;gap:12px;margin-top:6px">
+      <button class="big-btn btn-green" id="playAgain">🔄 שחק שוב</button>
+      <button class="big-btn btn-gray"  id="goMenu">📋 תפריט</button>
+    </div>`;
+
+  if(qualified){
+    const saveBtn=document.getElementById('saveName');
+    saveBtn.addEventListener('click',saveScore);
+    document.getElementById('nameInput').addEventListener('keydown',e=>{ if(e.key==='Enter')saveScore(); });
+  }
+  document.getElementById('playAgain').addEventListener('click',()=>selectGrade(gradeKey));
+  document.getElementById('goMenu').addEventListener('click',showMenu);
+  animId=requestAnimationFrame(bgLoop);
+}
+
+function saveScore(){
+  const nameEl=document.getElementById('nameInput');
+  const name=(nameEl?.value.trim()||'אנונימי');
+  addLBEntry(name,score,grade.label);
+  document.getElementById('nameArea')?.remove();
+  // Refresh leaderboard display
+  const existingLB=overlay.querySelector('.lb-table')?.parentElement;
+  if(existingLB){ existingLB.innerHTML=renderLB(score); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  GAME START / LEVEL START
+// ═══════════════════════════════════════════════════════
+function startLevel(){
+  levelDef=LEVEL_DEFS[levelIdx];
+  gPhase='play';
+  missiles=[]; interceptors=[]; explosions=[]; floatTexts=[];
+  spawnTimer=0; levelHits=0;
+  if(levelIdx===0){ score=0; lives=Math.min(8,5+upgrades.extraLife); BUILDINGS.forEach(b=>b.damage=0); resetAirstrikeUI(); }
+  // Arrow 3 — auto-intercept N missiles early in the level
+  if(upgrades.arrow3>0){
+    for(let ai=0;ai<upgrades.arrow3;ai++){
+      setTimeout(()=>{
+        if(gPhase!=='play') return;
+        const alive=missiles.filter(m=>!m.destroyed&&!m.intercepted).sort((a,b)=>b.y-a.y);
+        if(alive.length){ fireInterceptor(alive[0]); floatTexts.push({x:alive[0].x,y:alive[0].y-44,text:'🚀 חץ 3',life:1.5,col:'#00eeff'}); }
+      }, 4000+ai*3000);
+    }
+  }
+  overlay.style.display='none';
+  levelBanner.style.display='flex';
+  inGameLBEl.style.display='block';
+  missilePanelEl.style.display='block';
+  airstrikePanel.style.display='flex';
+  settingsBtn.style.display='flex';
+  shopBtnEl.style.display='block';
+  refreshInGameLB();
+  updateHUD();
+  applyAnswerMode();
+  aInput.value='';
+  cancelAnimationFrame(animId);
+  animId=requestAnimationFrame(gameLoop);
+}
+
+// ═══════════════════════════════════════════════════════
+//  HUD UPDATE
+// ═══════════════════════════════════════════════════════
+function updateHUD(){
+  scoreValEl.textContent=score.toLocaleString();
+  document.getElementById('coinVal').textContent=coins;
+  livesRowEl.innerHTML='חיים: '+'💚'.repeat(lives)+'🖤'.repeat(Math.max(0,5-lives));
+  levelNameEl.textContent=`שלב ${levelDef.id}: ${levelDef.name} ${levelDef.emoji}`;
+  if(!levelDef.bonus){
+    const pct=Math.min(100,Math.round(levelHits/levelDef.quota*100));
+    progressBar.style.width=pct+'%';
+    progressLbl.textContent=`${levelHits}/${levelDef.quota}`;
+  } else {
+    progressBar.style.width='100%';
+    progressLbl.textContent='בונוס 🎉';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  SPAWN MISSILE
+// ═══════════════════════════════════════════════════════
+function spawnOneMissile(){
+  const lev=levelDef, q=(lev.genQ?lev.genQ():lev.drone?droneQ():grade.genQ());
+  let sx,sy;
+  switch(lev.from){
+    case 'bottom-right': sx=W*.55+Math.random()*W*.4; sy=-30; break;
+    case 'far-left':     sx=Math.random()*W*.4; sy=-30; break;
+    case 'top-right':    sx=W*.5+Math.random()*W*.5; sy=-30; break;
+    case 'far-right':    sx=W*.6+Math.random()*W*.4; sy=-30; break;
+    default: sx=Math.random()*W; sy=-30; break;
+  }
+  const tx=DOME_X+(-W*.15+Math.random()*W*.3);
+  const ty=GROUND_Y+10;
+  const dx=tx-sx, dy=ty-sy;
+  const dist=Math.sqrt(dx*dx+dy*dy);
+  const spd=(lev.baseSpeed*(0.85+Math.random()*.3))*(upgrades.slowMissile>0?0.82:1);
+  missiles.push({
+    id:missileId++, x:sx, y:sy,
+    vx:(dx/dist)*spd, vy:(dy/dist)*spd,
+    tx,ty, q:q.q, ans:q.ans,
+    col:lev.col, dark:lev.dark, emoji:lev.emoji,
+    drone:!!lev.drone,
+    trail:[], destroyed:false, intercepted:false,
+    spawnTime:Date.now()
+  });
+}
+
+function spawnMissile(){
+  const lev=levelDef;
+  const active=missiles.filter(m=>!m.destroyed&&!m.intercepted).length;
+
+  // Trigger siren on every new missile arrival
+  triggerSiren();
+
+  // 30% chance of cluster (2-4 missiles)
+  const isCluster = Math.random() < 0.30;
+  const clusterSize = isCluster ? 2 + Math.floor(Math.random()*3) : 1;
+
+  spawnOneMissile();
+  if(answerMode==='choice') setTimeout(renderChoiceButtons, 80);
+  for(let i=1; i<clusterSize; i++){
+    if(active+i >= lev.maxScreen+2) break;
+    const delay = i * (350 + Math.random()*300);
+    setTimeout(()=>{ if(gPhase==='play'){ spawnOneMissile(); triggerSiren(); } }, delay);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  INTERCEPT / HIT
+// ═══════════════════════════════════════════════════════
+function fireInterceptor(m){
+  m.intercepted=true;
+  const dx=m.x-DOME_X, dy=m.y-(DOME_Y-60);
+  armTarget=Math.atan2(dy,dx);
+  armRecoil=0.6;
+  interceptors.push({ x:DOME_X, y:DOME_Y-70, target:m, speed:14, trail:[] });
+  // Double shot upgrade — also intercept next most dangerous
+  if(upgrades.doubleShot>0){
+    const next=missiles.filter(n=>!n.destroyed&&!n.intercepted&&n!==m).sort((a,b)=>b.y-a.y)[0];
+    if(next){ next.intercepted=true; interceptors.push({x:DOME_X,y:DOME_Y-70,target:next,speed:14,trail:[]}); }
+  }
+}
+
+function destroyMissile(m, addScore=true){
+  if(m.destroyed) return;
+  m.destroyed=true;
+  explosions.push({x:m.x,y:m.y,r:0,maxR:55+Math.random()*35,life:1,col:m.col});
+  if(addScore){
+    const bonus=Math.max(5,60-Math.floor((Date.now()-m.spawnTime)/250));
+    score+=bonus; levelHits++;
+    coins+=8; saveShop();
+    floatTexts.push({x:m.x,y:m.y-30,text:`+${bonus}`,life:1,col:'#ffdd00'});
+    gainAirstrikeCharge(12);   // charge the F-35 on each correct intercept
+    updateHUD();
+    if(!levelDef.bonus && levelHits>=levelDef.quota){ setTimeout(checkLevelDone,400); }
+    // Regenerate choice buttons after a missile is destroyed
+    if(answerMode==='choice') setTimeout(renderChoiceButtons, 320);
+  }
+}
+
+function checkLevelDone(){
+  if(levelIdx>=LEVEL_DEFS.length-1){ showGameOver(true); return; }
+  showLevelClear();
+}
+
+function missileHit(m){
+  if(m.destroyed) return;
+  m.destroyed=true;
+  explosions.push({x:m.x,y:m.y,r:0,maxR:80,life:1,col:'#ff4400'});
+  lives=Math.max(0,lives-1);
+  const bld=BUILDINGS[Math.floor(Math.random()*BUILDINGS.length)];
+  if(bld) bld.damage=Math.min(bld.damage+1,3);
+  floatTexts.push({x:m.x,y:GROUND_Y-60,text:'💥 פגיעה!',life:1,col:'#ff4444'});
+  updateHUD();
+  if(lives<=0) setTimeout(()=>showGameOver(false),700);
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAWING HELPERS
+// ═══════════════════════════════════════════════════════
+function lighten(hex,a){ const n=parseInt(hex.slice(1),16); return `rgb(${Math.min(255,(n>>16)+a)},${Math.min(255,((n>>8)&0xff)+a)},${Math.min(255,(n&0xff)+a)})`; }
+function lerpAngle(a,b,t){ let d=b-a; while(d>Math.PI)d-=Math.PI*2; while(d<-Math.PI)d+=Math.PI*2; return a+d*t; }
+
+function drawMagenDavid(cx,cy,r,col){
+  ctx.fillStyle=col; ctx.strokeStyle=col; ctx.lineWidth=1.5;
+  const pts=(n,ang)=>Array.from({length:n},(_,i)=>[cx+r*Math.cos(ang+i*Math.PI*2/n),cy+r*Math.sin(ang+i*Math.PI*2/n)]);
+  const tri=(pts)=>{ ctx.beginPath(); ctx.moveTo(...pts[0]); pts.slice(1).forEach(p=>ctx.lineTo(...p)); ctx.closePath(); ctx.stroke(); };
+  tri(pts(3,-Math.PI/2));
+  tri(pts(3,Math.PI/2));
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAW: BACKGROUND
+// ═══════════════════════════════════════════════════════
+function drawBG(){
+  const sky=ctx.createLinearGradient(0,0,0,GROUND_Y);
+  sky.addColorStop(0,'#000612'); sky.addColorStop(.7,'#060e24'); sky.addColorStop(1,'#0a1a10');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,GROUND_Y);
+  ctx.fillStyle='#0e0e06'; ctx.fillRect(0,GROUND_Y,W,H-GROUND_Y);
+
+  // Stars twinkle
+  if(!STARS.length) genStars();
+  STARS.forEach(s=>{
+    s.tw+=.01;
+    ctx.globalAlpha=s.op*(.65+.35*Math.sin(s.tw));
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+  }); ctx.globalAlpha=1;
+
+  // Horizon glow
+  const hg=ctx.createLinearGradient(0,GROUND_Y-60,0,GROUND_Y);
+  hg.addColorStop(0,'rgba(20,60,20,0)'); hg.addColorStop(1,'rgba(20,60,20,.2)');
+  ctx.fillStyle=hg; ctx.fillRect(0,GROUND_Y-60,W,60);
+
+  // Ground
+  const gg=ctx.createLinearGradient(0,GROUND_Y,0,H);
+  gg.addColorStop(0,'#1c1608'); gg.addColorStop(1,'#0a0804');
+  ctx.fillStyle=gg; ctx.fillRect(0,GROUND_Y,W,H-GROUND_Y);
+
+  // Dome glow
+  const dg=ctx.createRadialGradient(DOME_X,GROUND_Y,0,DOME_X,GROUND_Y,W*.35);
+  dg.addColorStop(0,'rgba(0,200,100,.07)'); dg.addColorStop(1,'rgba(0,200,100,0)');
+  ctx.fillStyle=dg; ctx.fillRect(0,0,W,H);
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAW: CITY BUILDINGS
+// ═══════════════════════════════════════════════════════
+function drawBuildings(){
+  BUILDINGS.forEach(b=>{
+    const top=GROUND_Y-b.h, df=1-b.damage*.22;
+    // Building body
+    const r=Math.floor(25*df),g2=Math.floor(30*df),bl=Math.floor(50*df);
+    ctx.fillStyle=`rgb(${r},${g2},${bl})`;
+    if(b.type==='dome'){
+      ctx.fillRect(b.x,top+b.h*.45,b.w,b.h*.55);
+      ctx.beginPath(); ctx.arc(b.x+b.w/2,top+b.h*.45,b.w/2,Math.PI,0); ctx.fill();
+    } else {
+      ctx.fillRect(b.x,top,b.w,b.h);
+    }
+    // Windows
+    let wi=0;
+    for(let wy=top+8;wy<GROUND_Y-14;wy+=16){
+      for(let wx=b.x+5;wx<b.x+b.w-9;wx+=13){
+        if(b.wins[wi]){
+          ctx.fillStyle=b.damage>1?'#330000':'#eecc66';
+          ctx.fillRect(wx,wy,8,10);
+        }
+        wi++;
+      }
+    }
+    // Damage
+    if(b.damage>0){
+      ctx.strokeStyle='rgba(255,80,0,.35)'; ctx.lineWidth=1;
+      for(let i=0;i<b.damage*2;i++){
+        const cx=b.x+Math.random()*b.w, cy=top+Math.random()*b.h;
+        ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+(Math.random()-.5)*22,cy+6+Math.random()*20); ctx.stroke();
+      }
+    }
+  });
+  // Ground line
+  ctx.strokeStyle='rgba(80,120,60,.4)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(0,GROUND_Y); ctx.lineTo(W,GROUND_Y); ctx.stroke();
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAW: IRON DOME LAUNCHER
+// ═══════════════════════════════════════════════════════
+function drawLauncher(){
+  const bx=DOME_X, by=DOME_Y;
+  const t=Date.now();
+
+  // ── Ground concrete pad ──
+  const padW=W*.44;
+  const padGrad=ctx.createLinearGradient(bx-padW/2,by+4,bx+padW/2,by+4);
+  padGrad.addColorStop(0,'rgba(30,40,18,0)');
+  padGrad.addColorStop(.1,'rgba(50,62,34,.95)');
+  padGrad.addColorStop(.9,'rgba(50,62,34,.95)');
+  padGrad.addColorStop(1,'rgba(30,40,18,0)');
+  ctx.fillStyle=padGrad; ctx.fillRect(bx-padW/2,by+4,padW,14);
+  // Concrete lines
+  ctx.strokeStyle='rgba(70,88,48,.4)'; ctx.lineWidth=1;
+  for(let x=bx-padW/2;x<bx+padW/2;x+=26){
+    ctx.beginPath(); ctx.moveTo(x,by+4); ctx.lineTo(x,by+18); ctx.stroke();
+  }
+
+  // ── SPOTLIGHT from radar sweeping the sky ──
+  const rx=bx-W*.155, ry=by;
+  const spotAngle=-Math.PI/2.4+0.28*Math.sin(t/2600);
+  const spotLen=H*0.55;
+  ctx.save();
+  ctx.translate(rx,ry-44);
+  ctx.rotate(spotAngle);
+  const spotG=ctx.createLinearGradient(0,0,0,-spotLen);
+  spotG.addColorStop(0,`rgba(0,255,80,${0.06+0.03*Math.sin(t/400)})`);
+  spotG.addColorStop(0.5,'rgba(0,200,60,.03)');
+  spotG.addColorStop(1,'rgba(0,180,60,0)');
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-28,-spotLen); ctx.lineTo(28,-spotLen); ctx.closePath();
+  ctx.fillStyle=spotG; ctx.fill();
+  ctx.restore();
+
+  // ── Radar truck (left side) ──
+  ctx.save(); ctx.translate(rx,ry);
+  // Truck body
+  const rTruck=ctx.createLinearGradient(-36,-32,36,4);
+  rTruck.addColorStop(0,'#223614'); rTruck.addColorStop(.5,'#2e4c1c'); rTruck.addColorStop(1,'#1a2c0e');
+  ctx.fillStyle=rTruck;
+  ctx.beginPath(); ctx.roundRect(-36,-32,72,36,[5]); ctx.fill();
+  ctx.strokeStyle='#3c5826'; ctx.lineWidth=1.5; ctx.stroke();
+  // Armor panel
+  ctx.strokeStyle='rgba(50,90,34,.45)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(-36,-16); ctx.lineTo(36,-16); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-10,-32); ctx.lineTo(-10,4); ctx.stroke();
+  // Cab
+  ctx.fillStyle='#1e2e12';
+  ctx.beginPath(); ctx.roundRect(16,-40,20,16,[3,3,0,0]); ctx.fill();
+  ctx.strokeStyle='#2e4520'; ctx.lineWidth=1; ctx.stroke();
+  ctx.fillStyle='rgba(80,160,255,.22)'; ctx.fillRect(18,-38,16,13);
+  ctx.strokeStyle='rgba(200,230,255,.28)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(19,-37); ctx.lineTo(24,-30); ctx.stroke();
+  // Phased-array panel on truck side
+  ctx.fillStyle='#0a1408';
+  ctx.beginPath(); ctx.roundRect(-34,-28,22,22,[2]); ctx.fill();
+  ctx.strokeStyle='rgba(0,200,80,.35)'; ctx.lineWidth=1; ctx.stroke();
+  for(let pr=0;pr<4;pr++){
+    for(let pc=0;pc<4;pc++){
+      const on=Math.sin(t/300+pr*0.8+pc*0.6)>0.2;
+      ctx.fillStyle=on?'rgba(0,255,80,.85)':'rgba(0,100,35,.3)';
+      if(on){ ctx.shadowColor='rgba(0,255,80,.6)'; ctx.shadowBlur=4; }
+      ctx.beginPath(); ctx.arc(-34+4+pc*5,-28+4+pr*5,1.5,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0;
+    }
+  }
+  // Status LEDs
+  ['rgba(0,255,80,.95)','rgba(255,200,0,.9)','rgba(0,180,255,.9)'].forEach((col,i)=>{
+    const on=i===1?Math.sin(t/380+i*2)>0:true;
+    ctx.fillStyle=on?col:'rgba(40,60,30,.4)';
+    if(on){ ctx.shadowColor=col; ctx.shadowBlur=7; }
+    ctx.beginPath(); ctx.arc(24+i*5,-28,2.5,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+  });
+  // Wheels (3 axles)
+  [-24,0,24].forEach(wx=>{
+    const roll=t/260*0.5+wx*0.08;
+    ctx.fillStyle='#0d1208'; ctx.beginPath(); ctx.arc(wx,8,11,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#1c2810'; ctx.lineWidth=2; ctx.stroke();
+    for(let a=0;a<Math.PI*2;a+=Math.PI/3){
+      ctx.strokeStyle='rgba(38,58,22,.7)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(wx+Math.cos(a+roll)*4,8+Math.sin(a+roll)*4);
+      ctx.lineTo(wx+Math.cos(a+roll)*9,8+Math.sin(a+roll)*9); ctx.stroke();
+    }
+    ctx.fillStyle='#283818'; ctx.beginPath(); ctx.arc(wx,8,4,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(60,100,40,.55)'; ctx.beginPath(); ctx.arc(wx,8,2,0,Math.PI*2); ctx.fill();
+  });
+
+  // ── Big Radar Dish ──
+  const dishY=-46;
+  // Pole
+  const poleG=ctx.createLinearGradient(-5,dishY,5,dishY);
+  poleG.addColorStop(0,'#1a2c10'); poleG.addColorStop(.5,'#3a5c22'); poleG.addColorStop(1,'#1a2c10');
+  ctx.fillStyle=poleG; ctx.fillRect(-5,dishY,10,18);
+  ctx.strokeStyle='#2a4018'; ctx.lineWidth=1; ctx.strokeRect(-5,dishY,10,18);
+  // Dish oscillates slowly
+  const dishOsc=0.1*Math.sin(t/3200);
+  ctx.save(); ctx.translate(0,dishY); ctx.rotate(dishOsc);
+  // Dish outer rim — glowing
+  ctx.shadowColor='rgba(0,255,80,.7)'; ctx.shadowBlur=18;
+  ctx.strokeStyle='rgba(0,210,80,.95)'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.arc(0,0,42,-Math.PI,0); ctx.stroke();
+  ctx.shadowBlur=0;
+  // Back dish fill
+  const dFill=ctx.createRadialGradient(0,-10,4,0,0,42);
+  dFill.addColorStop(0,'rgba(0,220,80,.14)');
+  dFill.addColorStop(.65,'rgba(0,140,50,.05)');
+  dFill.addColorStop(1,'rgba(0,60,20,0)');
+  ctx.fillStyle=dFill;
+  ctx.beginPath(); ctx.arc(0,0,42,-Math.PI,0); ctx.lineTo(0,0); ctx.closePath(); ctx.fill();
+  // Grid lines
+  ctx.strokeStyle='rgba(50,140,50,.6)'; ctx.lineWidth=1;
+  for(let a=-Math.PI;a<0.05;a+=Math.PI/7){
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*42,Math.sin(a)*42); ctx.stroke();
+  }
+  [14,26,38].forEach(r=>{
+    ctx.beginPath(); ctx.arc(0,0,r,-Math.PI,0); ctx.stroke();
+  });
+  // SWEEP BEAM — continuous rotation
+  const sweepPos=(t/900)%Math.PI; // 0→PI left to right
+  const sweepA=-Math.PI+sweepPos;
+  // Fade trail
+  for(let i=10;i>=0;i--){
+    const ta=sweepA-(i+1)*0.055;
+    if(ta<-Math.PI||ta>0) continue;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,40,ta,ta+0.055); ctx.closePath();
+    ctx.fillStyle=`rgba(0,255,90,${0.012*(10-i)})`; ctx.fill();
+  }
+  // Bright beam
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,40,sweepA-0.1,sweepA); ctx.closePath();
+  ctx.shadowColor='rgba(0,255,80,.9)'; ctx.shadowBlur=14;
+  ctx.fillStyle='rgba(0,255,100,.5)'; ctx.fill();
+  ctx.shadowBlur=0;
+  // Bright tip
+  ctx.shadowColor='rgba(160,255,160,1)'; ctx.shadowBlur=10;
+  ctx.fillStyle='rgba(200,255,200,1)';
+  ctx.beginPath(); ctx.arc(Math.cos(sweepA)*36,Math.sin(sweepA)*36,4,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+  // Center hub
+  const hubG=ctx.createRadialGradient(0,0,1,0,0,7);
+  hubG.addColorStop(0,'#9fff90'); hubG.addColorStop(1,'#2a5020');
+  ctx.fillStyle=hubG; ctx.beginPath(); ctx.arc(0,0,7,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#5acc40'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.restore(); // end dish
+  // Blinking status light
+  if(Math.sin(t/280)>0){
+    ctx.shadowColor='rgba(0,255,80,1)'; ctx.shadowBlur=8;
+    ctx.fillStyle='rgba(0,255,80,.95)'; ctx.beginPath(); ctx.arc(30,-24,4,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+  }
+  ctx.restore(); // end radar truck
+
+  // ── Command unit (right side) ──
+  const cx2=bx+W*.143, cy2=by;
+  ctx.save(); ctx.translate(cx2,cy2);
+  const cg=ctx.createLinearGradient(-28,-28,28,4);
+  cg.addColorStop(0,'#1c3014'); cg.addColorStop(.5,'#283e18'); cg.addColorStop(1,'#162410');
+  ctx.fillStyle=cg; ctx.beginPath(); ctx.roundRect(-28,-28,56,32,[4]); ctx.fill();
+  ctx.strokeStyle='#304a20'; ctx.lineWidth=1.2; ctx.stroke();
+  ctx.strokeStyle='rgba(45,80,30,.4)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(-28,-14); ctx.lineTo(28,-14); ctx.stroke();
+  // Antennas (3)
+  [[-14,-50],[-5,-44],[5,-52]].forEach(([ax,ay],i)=>{
+    ctx.strokeStyle='#4a6a30'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(ax,-28); ctx.lineTo(ax,ay); ctx.stroke();
+    if(i===0){
+      ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax-8,ay+4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax+8,ay+4); ctx.stroke();
+    }
+    // Blinking tip
+    if(Math.sin(t/500+i*2.1)>0.4){
+      ctx.shadowColor='rgba(255,80,0,.9)'; ctx.shadowBlur=6;
+      ctx.fillStyle='rgba(255,100,0,.95)'; ctx.beginPath(); ctx.arc(ax,ay,2.5,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0;
+    }
+  });
+  // Comms crosswire
+  ctx.strokeStyle='rgba(70,100,45,.45)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(-14,-48); ctx.lineTo(-5,-48); ctx.stroke();
+  // Screen — with moving blip
+  const sPulse=0.1+0.06*Math.sin(t/360);
+  ctx.fillStyle=`rgba(0,150,55,${sPulse})`; ctx.fillRect(-22,-24,30,18);
+  ctx.strokeStyle='rgba(0,200,80,.5)'; ctx.lineWidth=1; ctx.strokeRect(-22,-24,30,18);
+  for(let sy=-24;sy<-8;sy+=3){
+    ctx.strokeStyle=`rgba(0,255,80,${0.06+0.03*Math.sin(t/200+sy)})`; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(-22,sy); ctx.lineTo(8,sy); ctx.stroke();
+  }
+  // Moving blip
+  const blipX=-20+26*((t/2200)%1);
+  const blipY=-22+14*Math.abs(Math.sin(t/1600));
+  ctx.shadowColor='rgba(0,255,80,1)'; ctx.shadowBlur=7;
+  ctx.fillStyle='#00ff80'; ctx.beginPath(); ctx.arc(blipX,blipY,2.2,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+  // Wheels
+  [-16,16].forEach(wx=>{
+    ctx.fillStyle='#0d1208'; ctx.beginPath(); ctx.arc(wx,6,9,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#1c2810'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='#283818'; ctx.beginPath(); ctx.arc(wx,6,4,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(60,100,40,.5)'; ctx.beginPath(); ctx.arc(wx,6,1.8,0,Math.PI*2); ctx.fill();
+  });
+  ctx.restore();
+
+  // ── Main launcher vehicle ──
+  const vw=W*.14, vh=38;
+  const vx=bx-vw/2, vy=by-vh+4;
+  // Body shadow
+  const shadow=ctx.createLinearGradient(vx,vy+vh,vx,vy+vh+8);
+  shadow.addColorStop(0,'rgba(0,0,0,.35)'); shadow.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=shadow; ctx.fillRect(vx,vy+vh,vw,8);
+  // Body gradient
+  const vg=ctx.createLinearGradient(vx,vy,vx,vy+vh);
+  vg.addColorStop(0,'#3a5c26'); vg.addColorStop(.4,'#2d4a1c'); vg.addColorStop(1,'#1e3012');
+  ctx.fillStyle=vg;
+  ctx.beginPath(); ctx.roundRect(vx,vy,vw,vh,[6,6,3,3]); ctx.fill();
+  ctx.strokeStyle='#4a6a2e'; ctx.lineWidth=1.5; ctx.stroke();
+  // Armor plates (horizontal panels)
+  ctx.strokeStyle='rgba(60,100,40,.4)'; ctx.lineWidth=1;
+  [0.3,0.65].forEach(p=>{
+    ctx.beginPath(); ctx.moveTo(vx+4,vy+vh*p); ctx.lineTo(vx+vw-4,vy+vh*p); ctx.stroke();
+  });
+  // Israeli flag stripes
+  ctx.fillStyle='rgba(60,100,220,.35)'; ctx.fillRect(vx,vy,vw,5);
+  ctx.fillStyle='rgba(60,100,220,.35)'; ctx.fillRect(vx,vy+vh-5,vw,5);
+  // Magen David
+  drawMagenDavid(bx+vw*.18, vy+vh/2, 9, '#4a7aff');
+  // "IDF" text hint
+  ctx.fillStyle='rgba(80,120,60,.7)'; ctx.font='bold 8px monospace'; ctx.textAlign='center'; ctx.direction='ltr';
+  ctx.fillText('IDF', bx-vw*.18, vy+vh/2+3);
+  // Cab section
+  const cabW=vw*0.28, cabX=vx+vw*0.68;
+  const cabG=ctx.createLinearGradient(cabX,vy-14,cabX,vy);
+  cabG.addColorStop(0,'#2a4018'); cabG.addColorStop(1,'#3a5826');
+  ctx.fillStyle=cabG; ctx.beginPath(); ctx.roundRect(cabX,vy-14,cabW,18,[3,3,0,0]); ctx.fill();
+  ctx.strokeStyle='#4a6030'; ctx.lineWidth=1.2; ctx.stroke();
+  // Windshield
+  ctx.fillStyle='rgba(100,200,255,.2)'; ctx.fillRect(cabX+3,vy-12,cabW-6,12);
+  // Wheels (6 wheels — 3 axles)
+  const wheelPositions=[vw*.12, vw*.36, vw*.62, vw*.78];
+  wheelPositions.forEach(wx=>{
+    const wwx=vx+wx;
+    // Tire
+    ctx.fillStyle='#0e140a'; ctx.beginPath(); ctx.arc(wwx,vy+vh+2,11,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#1c2410'; ctx.lineWidth=2; ctx.stroke();
+    // Tread pattern
+    for(let a=0;a<Math.PI*2;a+=Math.PI/4){
+      ctx.strokeStyle='rgba(40,60,25,.8)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(wwx+Math.cos(a)*8,vy+vh+2+Math.sin(a)*8); ctx.lineTo(wwx+Math.cos(a)*11,vy+vh+2+Math.sin(a)*11); ctx.stroke();
+    }
+    // Rim
+    ctx.fillStyle='#2a3818'; ctx.beginPath(); ctx.arc(wwx,vy+vh+2,5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(60,100,50,.6)'; ctx.beginPath(); ctx.arc(wwx,vy+vh+2,2,0,Math.PI*2); ctx.fill();
+  });
+  // Power cable to radar
+  ctx.strokeStyle='rgba(40,80,30,.6)'; ctx.lineWidth=2; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(vx,vy+vh/2); ctx.quadraticCurveTo(bx-W*.12,vy+vh,rx,ry-10); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── Rotating launcher pod — turret-mounted, no long arm ──
+  // Pivot sits on top of the main vehicle body
+  ctx.save();
+  ctx.translate(bx, vy+2);
+  ctx.rotate(armAngle);
+  ctx.translate(0, armRecoil*7);
+
+  if(armRecoil>0.08){ ctx.shadowColor='rgba(0,255,100,.85)'; ctx.shadowBlur=20; }
+
+  // Turret base ring with gear teeth
+  for(let gi=0;gi<12;gi++){
+    const ga=(gi/12)*Math.PI*2;
+    ctx.fillStyle='#1e3410';
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(ga-0.22)*13,Math.sin(ga-0.22)*13);
+    ctx.lineTo(Math.cos(ga-0.1)*17, Math.sin(ga-0.1)*17);
+    ctx.lineTo(Math.cos(ga+0.1)*17, Math.sin(ga+0.1)*17);
+    ctx.lineTo(Math.cos(ga+0.22)*13,Math.sin(ga+0.22)*13);
+    ctx.closePath(); ctx.fill();
+  }
+  const pivG=ctx.createRadialGradient(0,0,2,0,0,12);
+  pivG.addColorStop(0,'#78a85c'); pivG.addColorStop(1,'#1e3812');
+  ctx.fillStyle=pivG; ctx.beginPath(); ctx.arc(0,0,12,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#90cc68'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.fillStyle='#2a4418'; ctx.beginPath(); ctx.arc(0,0,4,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#a0e070'; ctx.lineWidth=1; ctx.stroke();
+
+  // Short hydraulic strut connecting turret to pod bottom
+  const sG=ctx.createLinearGradient(-6,0,6,0);
+  sG.addColorStop(0,'#1c300e'); sG.addColorStop(.5,'#4a7030'); sG.addColorStop(1,'#1c300e');
+  ctx.fillStyle=sG;
+  ctx.beginPath(); ctx.moveTo(-6,2); ctx.lineTo(-5,-18); ctx.lineTo(5,-18); ctx.lineTo(6,2); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='#507a38'; ctx.lineWidth=1; ctx.stroke();
+  // Hydraulic piston highlight
+  ctx.strokeStyle='rgba(120,180,80,.4)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(-2,1); ctx.lineTo(-2,-17); ctx.stroke();
+
+  // ── Launch pod — compact 4×2 canister, directly above strut ──
+  const podW=96, podH=50, podX=-podW/2, podY=-18-podH;
+
+  // Drop shadow
+  ctx.fillStyle='rgba(0,0,0,.3)';
+  ctx.beginPath(); ctx.roundRect(podX+3,podY+3,podW,podH,[5]); ctx.fill();
+
+  // Pod body — main metal casing
+  const pG=ctx.createLinearGradient(podX,podY,podX+podW*.15,podY+podH);
+  pG.addColorStop(0,'#526c38'); pG.addColorStop(.3,'#3e5828'); pG.addColorStop(.7,'#2e4418'); pG.addColorStop(1,'#1e3010');
+  ctx.fillStyle=pG; ctx.beginPath(); ctx.roundRect(podX,podY,podW,podH,[8,8,4,4]); ctx.fill();
+  ctx.strokeStyle='#607840'; ctx.lineWidth=2; ctx.stroke();
+
+  // Top bevel highlight
+  const topHL=ctx.createLinearGradient(podX,podY,podX,podY+10);
+  topHL.addColorStop(0,'rgba(130,190,70,.45)'); topHL.addColorStop(1,'rgba(80,130,40,0)');
+  ctx.fillStyle=topHL;
+  ctx.beginPath(); ctx.roundRect(podX,podY,podW,10,[8,8,0,0]); ctx.fill();
+
+  // Side panel lines (armor plates)
+  ctx.strokeStyle='rgba(70,110,40,.45)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(podX+8,podY+podH/2); ctx.lineTo(podX+podW-8,podY+podH/2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(podX+8,podY+podH*.28); ctx.lineTo(podX+podW-8,podY+podH*.28); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(podX+8,podY+podH*.72); ctx.lineTo(podX+podW-8,podY+podH*.72); ctx.stroke();
+
+  // Welding seams (vertical)
+  [-podW*.3, 0, podW*.3].forEach(sx=>{
+    ctx.strokeStyle='rgba(55,85,30,.35)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(podX+podW/2+sx, podY+6); ctx.lineTo(podX+podW/2+sx, podY+podH-6); ctx.stroke();
+  });
+
+  // Corner bolts
+  [[podX+6,podY+7],[podX+6,podY+podH-9],[podX+podW-8,podY+7],[podX+podW-8,podY+podH-9],
+   [podX+podW/2-4,podY+7],[podX+podW/2-4,podY+podH-9]].forEach(([bx3,by3])=>{
+    ctx.fillStyle='#2a3e18'; ctx.beginPath(); ctx.arc(bx3,by3,3,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#608040'; ctx.lineWidth=1; ctx.stroke();
+    // Bolt head cross
+    ctx.strokeStyle='rgba(90,130,50,.5)'; ctx.lineWidth=.8;
+    ctx.beginPath(); ctx.moveTo(bx3-2,by3); ctx.lineTo(bx3+2,by3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bx3,by3-2); ctx.lineTo(bx3,by3+2); ctx.stroke();
+  });
+
+  // Label strip
+  const lblG=ctx.createLinearGradient(podX,podY+podH-13,podX,podY+podH-2);
+  lblG.addColorStop(0,'rgba(0,0,0,0)'); lblG.addColorStop(1,'rgba(0,0,0,.35)');
+  ctx.fillStyle=lblG; ctx.beginPath(); ctx.roundRect(podX+4,podY+podH-13,podW-8,11,[0,0,3,3]); ctx.fill();
+  ctx.save(); ctx.direction='ltr'; ctx.textAlign='center';
+  ctx.fillStyle='rgba(160,220,90,.7)'; ctx.font='bold 6.5px monospace';
+  ctx.fillText('IRON DOME  ×8 TAMIR',0,podY+podH-4);
+  ctx.restore();
+
+  // ── 8 launch tubes (4 columns × 2 rows) ──
+  const tR=8, tC=4, tRs=2, tPX=5, tPY=7;
+  const tW=tC*(tR*2)+(tC-1)*tPX, tH=tRs*(tR*2)+(tRs-1)*tPY;
+  const tSX=podX+(podW-tW)/2+tR, tSY=podY+(podH-tH)/2+tR-3;
+  for(let row=0;row<tRs;row++){
+    for(let col=0;col<tC;col++){
+      const tx2=tSX+col*(tR*2+tPX), ty2=tSY+row*(tR*2+tPY);
+      // Outer rim (dark ring)
+      ctx.fillStyle='#0e1608';
+      ctx.beginPath(); ctx.arc(tx2,ty2,tR+2,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle=armRecoil>0.05?'rgba(120,255,80,.95)':'rgba(90,148,55,.7)';
+      ctx.lineWidth=1.5; ctx.stroke();
+      // Tube depth (dark interior)
+      const td=ctx.createRadialGradient(tx2-2,ty2-2,1,tx2,ty2,tR);
+      td.addColorStop(0,'rgba(40,90,18,.6)'); td.addColorStop(.5,'rgba(8,20,4,.9)'); td.addColorStop(1,'rgba(2,6,1,1)');
+      ctx.fillStyle=td; ctx.beginPath(); ctx.arc(tx2,ty2,tR,0,Math.PI*2); ctx.fill();
+      // Missile tip visible in tube
+      const nR=tR*0.52;
+      const missileCol=armRecoil>0.05
+        ?`rgba(210,255,160,${0.75+armRecoil*.25})`
+        :'rgba(140,200,100,.6)';
+      ctx.fillStyle=missileCol;
+      ctx.beginPath(); ctx.arc(tx2,ty2,nR,0,Math.PI*2); ctx.fill();
+      // Specular highlight on tip
+      ctx.fillStyle='rgba(240,255,220,.28)';
+      ctx.beginPath(); ctx.arc(tx2-nR*.35,ty2-nR*.35,nR*.4,0,Math.PI*2); ctx.fill();
+      // Launch glow
+      if(armRecoil>0.05){
+        ctx.shadowColor='rgba(80,255,100,1)'; ctx.shadowBlur=14;
+        ctx.strokeStyle=`rgba(140,255,100,${armRecoil})`;
+        ctx.lineWidth=2; ctx.beginPath(); ctx.arc(tx2,ty2,tR+1,0,Math.PI*2); ctx.stroke();
+        ctx.shadowBlur=0;
+        // Flash inner tube on fire
+        ctx.fillStyle=`rgba(200,255,150,${armRecoil*0.4})`;
+        ctx.beginPath(); ctx.arc(tx2,ty2,tR,0,Math.PI*2); ctx.fill();
+      }
+    }
+  }
+
+  // Side reinforcement bars
+  ctx.strokeStyle='rgba(80,120,50,.55)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(podX+2,podY+8); ctx.lineTo(podX+2,podY+podH-8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(podX+podW-2,podY+8); ctx.lineTo(podX+podW-2,podY+podH-8); ctx.stroke();
+
+  ctx.shadowBlur=0;
+  ctx.restore(); // end launcher pod
+
+  // ── Ground glow ──
+  const gg=ctx.createRadialGradient(bx,by+4,0,bx,by+4,W*.26);
+  gg.addColorStop(0,`rgba(0,220,80,${0.06+0.025*Math.sin(t/900)})`);
+  gg.addColorStop(.6,'rgba(0,140,50,.02)');
+  gg.addColorStop(1,'rgba(0,80,30,0)');
+  ctx.fillStyle=gg; ctx.fillRect(bx-W*.3,by-16,W*.6,36);
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAW: MISSILES
+// ═══════════════════════════════════════════════════════
+// ── Draw drone (UAV) ──
+// Fixed-wing kamikaze drone (Shahed-style) oriented in direction of flight
+function drawDrone(m){
+  const t2=Date.now();
+  const flightAngle=Math.atan2(m.vy,m.vx); // direction of travel
+
+  // Exhaust/smoke trail
+  m.trail.forEach((pt,i)=>{
+    const a=(i/m.trail.length)*.3;
+    const r=2.5*(i/m.trail.length)+0.5;
+    ctx.globalAlpha=a;
+    ctx.fillStyle='rgba(160,160,140,.8)';
+    ctx.beginPath(); ctx.arc(pt.x,pt.y,r,0,Math.PI*2); ctx.fill();
+  }); ctx.globalAlpha=1;
+
+  ctx.save();
+  ctx.translate(m.x,m.y);
+  // Orient drone nose in direction of flight + gentle wobble
+  ctx.rotate(flightAngle + Math.PI/2 + 0.05*Math.sin(t2/400+m.id));
+
+  // ── Engine exhaust glow (rear = bottom in local coords) ──
+  const exhaustPulse=0.5+0.5*Math.sin(t2/90);
+  ctx.shadowColor='rgba(255,140,0,.7)'; ctx.shadowBlur=12*exhaustPulse;
+  ctx.fillStyle=`rgba(255,${140+Math.floor(60*exhaustPulse)},0,${0.5+0.3*exhaustPulse})`;
+  ctx.beginPath(); ctx.ellipse(0,22,4,6,0,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+
+  // ── Pusher propeller (spinning, rear) ──
+  const propSpin=t2/55;
+  for(let b=0;b<2;b++){
+    const pa=propSpin+(b/2)*Math.PI;
+    ctx.fillStyle='rgba(100,100,90,.75)';
+    ctx.save(); ctx.translate(0,20); ctx.rotate(pa);
+    ctx.beginPath(); ctx.ellipse(0,-7,2.5,8,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  // Prop hub
+  ctx.fillStyle='#555550'; ctx.beginPath(); ctx.arc(0,20,3,0,Math.PI*2); ctx.fill();
+
+  // ── Delta wings ──
+  // Color: sandy tan camouflage
+  const wingCol='#8a7c5a';
+  const wingDark='#6a5e3e';
+  // Left wing
+  const wg1=ctx.createLinearGradient(-30,8,-4,8);
+  wg1.addColorStop(0,wingDark); wg1.addColorStop(1,wingCol);
+  ctx.fillStyle=wg1;
+  ctx.beginPath(); ctx.moveTo(-4,-6); ctx.lineTo(-30,14); ctx.lineTo(-4,18); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(50,40,20,.5)'; ctx.lineWidth=1; ctx.stroke();
+  // Right wing (mirror)
+  const wg2=ctx.createLinearGradient(4,8,30,8);
+  wg2.addColorStop(0,wingCol); wg2.addColorStop(1,wingDark);
+  ctx.fillStyle=wg2;
+  ctx.beginPath(); ctx.moveTo(4,-6); ctx.lineTo(30,14); ctx.lineTo(4,18); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(50,40,20,.5)'; ctx.lineWidth=1; ctx.stroke();
+  // Wing leading-edge detail line
+  ctx.strokeStyle='rgba(100,90,60,.4)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(-3,-4); ctx.lineTo(-26,12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(3,-4); ctx.lineTo(26,12); ctx.stroke();
+
+  // ── V-tail fins (rear) ──
+  const tailCol='#7a6e4c';
+  ctx.fillStyle=tailCol;
+  ctx.beginPath(); ctx.moveTo(-3,14); ctx.lineTo(-16,26); ctx.lineTo(-3,22); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(3,14); ctx.lineTo(16,26); ctx.lineTo(3,22); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(40,30,10,.4)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(-3,14); ctx.lineTo(-16,26); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(3,14); ctx.lineTo(16,26); ctx.stroke();
+
+  // ── Main fuselage ──
+  const fg=ctx.createLinearGradient(-5,-24,5,-24);
+  fg.addColorStop(0,'#7a6e4c'); fg.addColorStop(.5,'#a09070'); fg.addColorStop(1,'#7a6e4c');
+  ctx.fillStyle=fg;
+  ctx.beginPath(); ctx.roundRect(-5,-24,10,46,[4,4,2,2]); ctx.fill();
+  ctx.strokeStyle='rgba(50,40,20,.5)'; ctx.lineWidth=1; ctx.stroke();
+  // Fuselage panel line
+  ctx.strokeStyle='rgba(60,50,25,.35)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(-4,-10); ctx.lineTo(-4,14); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(4,-10); ctx.lineTo(4,14); ctx.stroke();
+
+  // ── Nose cone ──
+  const nc=ctx.createLinearGradient(-4,-26,4,-26);
+  nc.addColorStop(0,'#6a6040'); nc.addColorStop(.5,'#c0b080'); nc.addColorStop(1,'#6a6040');
+  ctx.fillStyle=nc;
+  ctx.beginPath(); ctx.moveTo(0,-30); ctx.lineTo(-4,-24); ctx.lineTo(4,-24); ctx.closePath(); ctx.fill();
+
+  // ── Warhead indicator (blinking red light on nose) ──
+  if(Math.sin(t2/220+m.id*2.5)>0.3){
+    ctx.shadowColor='rgba(255,0,0,1)'; ctx.shadowBlur=8;
+    ctx.fillStyle='#ff2200';
+    ctx.beginPath(); ctx.arc(0,-27,2,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+  }
+
+  // ── Wing-tip nav lights ──
+  const wblink=Math.sin(t2/340+m.id)>0;
+  ctx.fillStyle=wblink?'rgba(255,60,60,.9)':'rgba(80,0,0,.4)';
+  if(wblink){ ctx.shadowColor='rgba(255,0,0,.8)'; ctx.shadowBlur=5; }
+  ctx.beginPath(); ctx.arc(-29,14,2,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.fillStyle=wblink?'rgba(60,60,255,.9)':'rgba(0,0,80,.4)';
+  if(wblink){ ctx.shadowColor='rgba(60,60,255,.8)'; ctx.shadowBlur=5; }
+  ctx.beginPath(); ctx.arc(29,14,2,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+
+  ctx.restore();
+
+  // Math question label
+  const danger=Math.max(0,Math.min(1,(m.y-100)/(GROUND_Y-150)));
+  const qCol=danger>.7?'#ff4444':danger>.4?'#ffaa00':'#ddd8aa';
+  ctx.save(); ctx.direction='ltr'; ctx.textAlign='center';
+  ctx.font=`bold ${Math.round(13+danger*5)}px Segoe UI`;
+  ctx.shadowColor=danger>.5?'#ff4400':'#886600'; ctx.shadowBlur=danger>.5?10:8;
+  ctx.fillStyle=qCol; ctx.fillText(m.q,m.x,m.y-38);
+  ctx.shadowBlur=0; ctx.restore();
+
+  // Country emoji
+  ctx.font='12px Arial'; ctx.textAlign='center'; ctx.fillStyle='rgba(255,255,255,.75)';
+  ctx.fillText(m.emoji,m.x,m.y+36);
+
+  // Pulsing ring for most dangerous
+  const mostDangerous2=missiles.length>0&&missiles.filter(x=>!x.destroyed).reduce((a,b)=>b.y>a.y?b:a,{y:-1})===m;
+  if(mostDangerous2){
+    const pulse=.5+.5*Math.sin(Date.now()/200);
+    ctx.strokeStyle=`rgba(255,180,0,${pulse})`; ctx.lineWidth=2;
+    ctx.setLineDash([5,5]); ctx.beginPath(); ctx.arc(m.x,m.y,34,0,Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function drawMissile(m){
+  if(m.drone){ drawDrone(m); return; }
+  const angle=Math.atan2(m.vy,m.vx);
+  // Trail
+  m.trail.forEach((t,i)=>{
+    const a=(i/m.trail.length)*.4;
+    ctx.globalAlpha=a; ctx.fillStyle='rgba(220,150,60,.9)';
+    ctx.beginPath(); ctx.arc(t.x,t.y,3*(i/m.trail.length)+.5,0,Math.PI*2); ctx.fill();
+  }); ctx.globalAlpha=1;
+
+  // Missile body
+  ctx.save(); ctx.translate(m.x,m.y); ctx.rotate(angle+Math.PI/2);
+
+  const bg=ctx.createLinearGradient(-7,0,7,0);
+  bg.addColorStop(0,m.dark); bg.addColorStop(.5,lighten(m.col,55)); bg.addColorStop(1,m.dark);
+  ctx.fillStyle=bg; ctx.beginPath(); ctx.roundRect(-7,-24,14,34,[3]); ctx.fill();
+
+  // Nose
+  ctx.fillStyle=lighten(m.col,70);
+  ctx.beginPath(); ctx.moveTo(0,-30); ctx.lineTo(-7,-24); ctx.lineTo(7,-24); ctx.fill();
+
+  // Fins
+  ctx.fillStyle=m.dark;
+  [[-7,8,-16,18],[ 7,8, 16,18]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.lineTo(x1,y2); ctx.fill();
+  });
+
+  // Engine flame
+  const fl=7+Math.random()*5;
+  const fg=ctx.createLinearGradient(0,10,0,10+fl);
+  fg.addColorStop(0,'#ff9900'); fg.addColorStop(1,'rgba(255,200,0,0)');
+  ctx.fillStyle=fg; ctx.beginPath(); ctx.moveTo(-4,10); ctx.lineTo(0,10+fl); ctx.lineTo(4,10); ctx.fill();
+
+  ctx.restore();
+
+  // Danger color (close to bottom = more red)
+  const danger=Math.max(0,Math.min(1,(m.y-100)/(GROUND_Y-150)));
+  const qCol=danger>.7?'#ff4444':danger>.4?'#ffaa00':'#ffffff';
+
+  // Math question label above missile (force LTR so 7-6 stays 7-6)
+  ctx.save();
+  ctx.direction='ltr';
+  ctx.textAlign='center';
+  ctx.font=`bold ${Math.round(14+danger*4)}px Segoe UI`;
+  ctx.shadowColor=danger>.5?'#ff4400':'#ffdd00'; ctx.shadowBlur=danger>0.5?10:6;
+  ctx.fillStyle=qCol;
+  ctx.fillText(m.q, m.x, m.y-36);
+  ctx.shadowBlur=0;
+  ctx.restore();
+
+  // Country emoji
+  ctx.font='13px Arial'; ctx.fillStyle='rgba(255,255,255,.7)';
+  ctx.fillText(m.emoji, m.x, m.y+12);
+
+  // Pulsing ring for most dangerous
+  const mossDangerous=missiles.length>0&&missiles.reduce((a,b)=>b.y>a.y?b:a)===m;
+  if(mossDangerous){
+    const pulse=.5+.5*Math.sin(Date.now()/200);
+    ctx.strokeStyle=`rgba(255,80,0,${pulse})`; ctx.lineWidth=2;
+    ctx.setLineDash([5,5]); ctx.beginPath(); ctx.arc(m.x,m.y,24,0,Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAW: INTERCEPTOR
+// ═══════════════════════════════════════════════════════
+function drawInterceptor(ic){
+  const dx=ic.target.x-ic.x, dy=ic.target.y-ic.y;
+  const angle=Math.atan2(dy,dx);
+  // Trail
+  ic.trail.forEach((t,i)=>{
+    const a=(i/ic.trail.length)*.6;
+    ctx.globalAlpha=a; ctx.fillStyle='rgba(120,255,170,.9)';
+    ctx.beginPath(); ctx.arc(t.x,t.y,3*(i/ic.trail.length)+.5,0,Math.PI*2); ctx.fill();
+  }); ctx.globalAlpha=1;
+  // Body
+  ctx.save(); ctx.translate(ic.x,ic.y); ctx.rotate(angle+Math.PI/2);
+  ctx.fillStyle='#ddeedd'; ctx.beginPath(); ctx.moveTo(0,-13); ctx.lineTo(-4,-4); ctx.lineTo(4,-4); ctx.fill();
+  ctx.fillStyle='#99bbaa'; ctx.fillRect(-3.5,-4,7,9);
+  // Flame
+  const fl=8+Math.random()*4;
+  const fg2=ctx.createLinearGradient(0,5,0,5+fl);
+  fg2.addColorStop(0,'rgba(120,255,160,.95)'); fg2.addColorStop(1,'rgba(60,255,120,0)');
+  ctx.fillStyle=fg2; ctx.beginPath(); ctx.moveTo(-3.5,5); ctx.lineTo(0,5+fl); ctx.lineTo(3.5,5); ctx.fill();
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAW: EXPLOSIONS & FLOAT TEXTS
+// ═══════════════════════════════════════════════════════
+function drawExplosions(){
+  explosions.forEach(e=>{
+    const p=1-e.life;
+    ctx.globalAlpha=e.life*.75;
+    ctx.strokeStyle=lighten(e.col,80); ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(e.x,e.y,e.r,0,Math.PI*2); ctx.stroke();
+    const ig=ctx.createRadialGradient(e.x,e.y,0,e.x,e.y,e.r*.75);
+    ig.addColorStop(0,`rgba(255,220,100,${e.life*.65})`);
+    ig.addColorStop(.6,`rgba(255,100,0,${e.life*.35})`);
+    ig.addColorStop(1,'rgba(200,0,0,0)');
+    ctx.fillStyle=ig; ctx.beginPath(); ctx.arc(e.x,e.y,e.r*.8,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+  });
+}
+
+function drawFloatTexts(){
+  floatTexts.forEach(t=>{
+    ctx.globalAlpha=t.life;
+    ctx.fillStyle=t.col; ctx.shadowColor=t.col; ctx.shadowBlur=8;
+    ctx.font=`bold 18px Segoe UI`; ctx.textAlign='center';
+    ctx.fillText(t.text,t.x,t.y);
+  }); ctx.globalAlpha=1; ctx.shadowBlur=0;
+}
+
+// ═══════════════════════════════════════════════════════
+//  PAUSE / RESUME
+// ═══════════════════════════════════════════════════════
+const pauseOverlayEl = document.getElementById('pauseOverlay');
+
+function pauseGame(){
+  if(gPhase !== 'play' || gamePaused) return;
+  gamePaused = true;
+  cancelAnimationFrame(animId);
+  pauseOverlayEl.style.display = 'flex';
+  animId = requestAnimationFrame(pauseHold);
+}
+
+function resumeGame(){
+  if(!gamePaused) return;
+  gamePaused = false;
+  pauseOverlayEl.style.display = 'none';
+  cancelAnimationFrame(animId);
+  lastT = 0;   // reset so dt=0 on the very first frame back
+  animId = requestAnimationFrame(gameLoop);
+}
+
+function pauseHold(){
+  // Keep the canvas alive while paused (background + launcher still animate)
+  drawBG(); drawBuildings(); drawLauncher();
+  animId = requestAnimationFrame(pauseHold);
+}
+
+// ═══════════════════════════════════════════════════════
+//  LOOPS
+// ═══════════════════════════════════════════════════════
+function bgLoop(){
+  drawBG(); drawBuildings(); drawLauncher();
+  animId=requestAnimationFrame(bgLoop);
+}
+
+let lastT=0;
+function gameLoop(ts=0){
+  const dt=Math.min(ts-lastT,60); lastT=ts;
+
+  drawBG();
+  drawBuildings();
+
+  if(gPhase==='play'){
+    spawnTimer+=dt;
+    const spMs=levelDef.spawnMs;
+    if(spawnTimer>=spMs && missiles.filter(m=>!m.destroyed&&!m.intercepted).length<levelDef.maxScreen){
+      spawnTimer=0;
+      spawnMissile();
+    }
+
+    // Launcher aim: mouse > keyboard > auto-aim
+    if(mouseOnCanvas){
+      // Follow mouse — but only allow pointing upward (above the launcher)
+      const dx=mouseX-DOME_X, dy=mouseY-(DOME_Y-30);
+      if(dy >= 0){
+        // Mouse is at or below the launcher pivot — snap to nearest horizontal
+        armTarget = (dx >= 0) ? -0.18 : -(Math.PI - 0.18);
+      } else {
+        armTarget = Math.atan2(dy, dx);
+      }
+    } else if(keyLeft || keyRight){
+      armTarget += keyLeft ? -0.04 : 0.04;
+    } else {
+      // Auto-aim at most dangerous non-intercepted missile
+      const active=missiles.filter(m=>!m.destroyed&&!m.intercepted);
+      if(active.length>0){
+        active.sort((a,b)=>b.y-a.y);
+        const t=active[0];
+        const dx=t.x-DOME_X, dy=t.y-(DOME_Y-60);
+        armTarget=Math.atan2(dy,dx);
+      } else {
+        armTarget=-Math.PI*.42;
+      }
+    }
+    // Hard clamp: launcher can only point into the upper half (never below horizon)
+    armTarget = Math.max(-Math.PI + 0.15, Math.min(-0.15, armTarget));
+    armAngle=lerpAngle(armAngle,armTarget,.12);
+    if(armRecoil>0) armRecoil=Math.max(0,armRecoil-.04);
+
+    // Update missiles (intercepted missiles still move so the interceptor can chase them)
+    missiles.forEach(m=>{
+      if(m.destroyed) return;
+      m.trail.push({x:m.x,y:m.y});
+      if(m.trail.length>22) m.trail.shift();
+      m.x+=m.vx; m.y+=m.vy;
+      if(!m.intercepted && m.y>=GROUND_Y-10) missileHit(m);
+      // Iron Beam — vaporize missile close to ground
+      if(!m.intercepted && !m.destroyed && upgrades.ironBeam>0 && m.y>=GROUND_Y-65){
+        // Draw laser beam on canvas before destroying
+        ctx.save();
+        ctx.strokeStyle=`rgba(0,220,255,0.85)`; ctx.lineWidth=3; ctx.shadowColor='#00ffff'; ctx.shadowBlur=18;
+        ctx.beginPath(); ctx.moveTo(DOME_X,DOME_Y-30); ctx.lineTo(m.x,m.y); ctx.stroke();
+        ctx.restore();
+        destroyMissile(m,true);
+        floatTexts.push({x:m.x,y:m.y-40,text:'⚡ Iron Beam',life:1.4,col:'#00eeff'});
+      }
+    });
+    missiles=missiles.filter(m=>!m.destroyed);
+
+    // Update interceptors
+    interceptors.forEach(ic=>{
+      ic.trail.push({x:ic.x,y:ic.y});
+      if(ic.trail.length>18) ic.trail.shift();
+      const dx=ic.target.x-ic.x, dy=ic.target.y-ic.y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<16){ destroyMissile(ic.target); ic.done=true; }
+      else { ic.x+=dx/d*ic.speed; ic.y+=dy/d*ic.speed; }
+    });
+    interceptors=interceptors.filter(ic=>!ic.done);
+
+    // Update effects
+    explosions.forEach(e=>{ e.r+=4; e.life-=.05; });
+    explosions=explosions.filter(e=>e.life>0);
+    floatTexts.forEach(t=>{ t.y-=1.4; t.life-=.025; });
+    floatTexts=floatTexts.filter(t=>t.life>0);
+
+    // Draw
+    drawExplosions();
+    interceptors.forEach(drawInterceptor);
+    missiles.filter(m=>!m.destroyed).forEach(drawMissile);
+    drawFloatTexts();
+
+    // Update missile panel (DOM, ~every 4 frames)
+    if(Math.round(ts/16)%4===0) updateMissilePanel();
+  }
+
+  drawLauncher();
+  animId=requestAnimationFrame(gameLoop);
+}
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+genStars();
+
+// On touch devices → default to choice mode (no keyboard to type)
+if('ontouchstart' in window || navigator.maxTouchPoints > 0){
+  answerMode = 'choice';
+  document.querySelectorAll('.toggle-opt').forEach(o =>
+    o.classList.toggle('active', o.dataset.mode === 'choice'));
+}
+
+showMenu();
+</script>
+</body>
+</html>

@@ -614,8 +614,8 @@ canvas { display:block; }
   <div class="setting-row">
     <span>מצב תשובה:</span>
     <div class="toggle-wrap" id="modeToggle">
-      <div class="toggle-opt active" data-mode="type">⌨️ הקלדה</div>
-      <div class="toggle-opt" data-mode="choice">🔘 בחירה מ-4</div>
+      <div class="toggle-opt" data-mode="type">⌨️ הקלדה</div>
+      <div class="toggle-opt active" data-mode="choice">🔘 בחירה מ-4</div>
     </div>
   </div>
   <button class="big-btn btn-green" id="closeSettings" style="margin-top:10px">✔ סגור</button>
@@ -839,7 +839,7 @@ let keyLeft = false, keyRight = false;
 let airstrikeCharge = 0;   // 0–100
 let airstrikeUsed   = false;
 // Settings
-let answerMode = 'type';   // 'type' | 'choice'
+let answerMode = 'choice';   // 'type' | 'choice'
 
 // ═══════════════════════════════════════════════════════
 //  DOM
@@ -918,6 +918,26 @@ aInput.addEventListener('keydown',e=>{
   if(e.key==='ArrowUp'||e.key==='ArrowDown') e.preventDefault();
 });
 
+// ── Right-answer sounds: every 4th correct answer, play 1 of 3, never same twice ──
+window._rSnds = [
+  new Audio('assests/sounds/iron-dome/right answer.mp3'),
+  new Audio('assests/sounds/iron-dome/right answer 2.mp3'),
+  new Audio('assests/sounds/iron-dome/right answer 3.mp3')
+];
+window._rSnds.forEach(function(s){ s.volume = 0.8; s.preload = 'auto'; });
+window._rCount = 0;
+window._rLast  = -1;
+function playRightSound(){
+  window._rCount++;
+  if(window._rCount % 3 !== 0) return;         // only every 3rd hit
+  var choices = [0,1,2].filter(function(i){ return i !== window._rLast; });
+  var pick = choices[Math.floor(Math.random()*choices.length)];
+  window._rLast = pick;
+  var snd = window._rSnds[pick];
+  snd.currentTime = 0;
+  snd.play().catch(function(e){ console.warn('playRightSound err', e); });
+}
+
 function submitAnswer(){
   const v = parseInt(aInput.value, 10);
   if(isNaN(v)){ flashWrong(); return; }
@@ -927,6 +947,7 @@ function submitAnswer(){
   // Hit most dangerous (closest to bottom)
   matching.sort((a,b)=>b.y-a.y);
   fireInterceptor(matching[0]);
+  playRightSound();
   aInput.value='';
 }
 
@@ -1036,6 +1057,7 @@ function handleChoiceClick(v){
   }
   matching.sort((a,b)=>b.y-a.y);
   fireInterceptor(matching[0]);
+  playRightSound();
   // Flash correct briefly then regenerate
   choicePanel.querySelectorAll('.choice-btn').forEach(b => {
     if(parseInt(b.dataset.val)===v) b.classList.add('correct-flash');
@@ -2292,29 +2314,6 @@ const bgMusic  = new Audio('assests/sounds/iron-dome/short background.mp3');
 bgMusic.loop   = true;
 bgMusic.volume = 0.45;
 
-const rightSnd  = new Audio('assests/sounds/iron-dome/right answer.mp3');
-const rightSnd2 = new Audio('assests/sounds/iron-dome/right answer 2.mp3');
-const rightSnd3 = new Audio('assests/sounds/iron-dome/right answer 3.mp3');
-rightSnd.volume = rightSnd2.volume = rightSnd3.volume = 0.8;
-
-let correctCount = 0;   // total correct answers
-let lastSpecial  = null; // last special sound played (2 or 3)
-
-function playRightSound() {
-  correctCount++;
-  let snd;
-  if (correctCount % 4 === 0) {
-    // Every 4th answer — pick 2 or 3, not the same as last time
-    const choices = [rightSnd2, rightSnd3].filter(s => s !== lastSpecial);
-    snd = choices[Math.floor(Math.random() * choices.length)];
-    lastSpecial = snd;
-  } else {
-    snd = rightSnd;
-  }
-  snd.currentTime = 0;
-  snd.play().catch(() => {});
-}
-
 function ensureBgMusic() { bgMusic.play().catch(() => {}); }
 
 const _origShowMenu2 = showMenu;
@@ -2331,19 +2330,6 @@ pauseGame = function(...a) { _origPauseGame2.apply(this, a); bgMusic.volume = 0.
 
 const _origResumeGame2 = resumeGame;
 resumeGame = function(...a) { _origResumeGame2.apply(this, a); bgMusic.volume = 0.45; };
-
-const _origSubmitAnswer = submitAnswer;
-submitAnswer = function(...a) {
-  const before = missiles.filter(m => !m.destroyed && !m.intercepted).length;
-  _origSubmitAnswer.apply(this, a);
-  if (missiles.filter(m => !m.destroyed && !m.intercepted).length < before) playRightSound();
-};
-
-const _origFireInterceptor = fireInterceptor;
-fireInterceptor = function(...a) {
-  _origFireInterceptor.apply(this, a);
-  playRightSound();
-};
 
 // ── Solo mode (?solo in URL hides back-to-hub buttons) ──
 if (new URLSearchParams(location.search).has('solo')) {

@@ -2284,6 +2284,80 @@ if('ontouchstart' in window || navigator.maxTouchPoints > 0){
 }
 
 showMenu();
+
+// ══════════════════════════════════════════════════════
+//  AUDIO
+// ══════════════════════════════════════════════════════
+const bgMusic  = new Audio('assests/sounds/iron-dome/short background.mp3');
+bgMusic.loop   = true;
+bgMusic.volume = 0.45;
+
+const rightSnd  = new Audio('assests/sounds/iron-dome/right answer.mp3');
+const rightSnd2 = new Audio('assests/sounds/iron-dome/right answer 2.mp3');
+const rightSnd3 = new Audio('assests/sounds/iron-dome/right answer 3.mp3');
+rightSnd.volume = rightSnd2.volume = rightSnd3.volume = 0.8;
+
+let correctCount = 0;   // total correct answers
+let lastSpecial  = null; // last special sound played (2 or 3)
+
+function playRightSound() {
+  correctCount++;
+  let snd;
+  if (correctCount % 4 === 0) {
+    // Every 4th answer — pick 2 or 3, not the same as last time
+    const choices = [rightSnd2, rightSnd3].filter(s => s !== lastSpecial);
+    snd = choices[Math.floor(Math.random() * choices.length)];
+    lastSpecial = snd;
+  } else {
+    snd = rightSnd;
+  }
+  snd.currentTime = 0;
+  snd.play().catch(() => {});
+}
+
+function ensureBgMusic() { bgMusic.play().catch(() => {}); }
+
+const _origShowMenu2 = showMenu;
+showMenu = function(...a) { _origShowMenu2.apply(this, a); bgMusic.pause(); };
+
+const _origShowGameOver2 = showGameOver;
+showGameOver = function(...a) { _origShowGameOver2.apply(this, a); bgMusic.pause(); };
+
+const _origStartLevel2 = startLevel;
+startLevel = function(...a) { _origStartLevel2.apply(this, a); ensureBgMusic(); };
+
+const _origPauseGame2 = pauseGame;
+pauseGame = function(...a) { _origPauseGame2.apply(this, a); bgMusic.volume = 0.15; };
+
+const _origResumeGame2 = resumeGame;
+resumeGame = function(...a) { _origResumeGame2.apply(this, a); bgMusic.volume = 0.45; };
+
+const _origSubmitAnswer = submitAnswer;
+submitAnswer = function(...a) {
+  const before = missiles.filter(m => !m.destroyed && !m.intercepted).length;
+  _origSubmitAnswer.apply(this, a);
+  if (missiles.filter(m => !m.destroyed && !m.intercepted).length < before) playRightSound();
+};
+
+const _origFireInterceptor = fireInterceptor;
+fireInterceptor = function(...a) {
+  _origFireInterceptor.apply(this, a);
+  playRightSound();
+};
+
+// ── Solo mode (?solo in URL hides back-to-hub buttons) ──
+if (new URLSearchParams(location.search).has('solo')) {
+  const style = document.createElement('style');
+  style.textContent = '#backBtn { display:none !important; } #encBtn { top:16px !important; right:16px !important; }';
+  document.head.appendChild(style);
+  // Also hide the "תפריט" button inside game-over overlay whenever it renders
+  const _origShowGameOver3 = showGameOver;
+  showGameOver = function(...a) {
+    _origShowGameOver3.apply(this, a);
+    const btn = document.getElementById('goMenu');
+    if (btn) btn.style.display = 'none';
+  };
+}
 </script>
 </body>
 </html>

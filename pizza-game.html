@@ -306,7 +306,7 @@ function renderLeaderboard(container, highlightScore) {
   }).join('');
 }
 
-// ── Game state ──────────────────────────────────────────────
+// ── Game state ────────────────────────────────────────────────────
 let gameRunning = false;
 let animId;
 let score = 0;
@@ -337,7 +337,7 @@ function playerRect() {
   const bottom = player.y + player.h;
   if (player.ducking) {
     // כפוף: גוף נמוך — נחשף למכשולים על הקרקע, מגלש מתחת למעופפים
-    // הגוף הכפוף מתחיל מ-y=260 (מעל מכשולי קרקע, מתחת למעופפים)
+    // הגוף הכפוף מתחיל מר-y=260 (מעל מכשולי קרקע, מתחת למעופפים)
     return { x: player.x, y: bottom - 84, w: player.w + 8, h: 44 };
   }
   // עומד: מכסים את הגוף והראש

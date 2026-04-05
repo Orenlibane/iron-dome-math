@@ -9,6 +9,114 @@
 html, body { width:100%; height:100%; background:#000; overflow:hidden; font-family:'Segoe UI',Arial,sans-serif; }
 canvas { display:block; }
 
+/* ══ SPLASH SCREEN ══ */
+#splash {
+  position:fixed; inset:0; z-index:9999;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:radial-gradient(ellipse at 50% 40%, #001a0a 0%, #000 70%);
+  overflow:hidden;
+}
+#splash.fade-out {
+  animation: splashFadeOut 0.8s ease forwards;
+}
+@keyframes splashFadeOut {
+  to { opacity:0; pointer-events:none; }
+}
+
+/* Shield dome glow */
+.splash-dome {
+  width:180px; height:180px; border-radius:50%;
+  background: radial-gradient(circle, rgba(0,255,136,.15) 0%, transparent 70%);
+  border:3px solid rgba(0,255,136,.6);
+  box-shadow: 0 0 60px rgba(0,255,136,.3), 0 0 120px rgba(0,255,136,.15), inset 0 0 40px rgba(0,255,136,.1);
+  animation: domeAppear 1s ease-out forwards, domePulse 2s ease-in-out 1s infinite;
+  opacity:0; position:relative;
+}
+.splash-dome::after {
+  content:'🛡️'; position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%); font-size:64px;
+  filter:drop-shadow(0 0 20px rgba(0,255,136,.5));
+}
+@keyframes domeAppear {
+  0% { opacity:0; transform:scale(0.3); }
+  60% { opacity:1; transform:scale(1.1); }
+  100% { opacity:1; transform:scale(1); }
+}
+@keyframes domePulse {
+  0%,100% { box-shadow: 0 0 60px rgba(0,255,136,.3), 0 0 120px rgba(0,255,136,.15); }
+  50% { box-shadow: 0 0 80px rgba(0,255,136,.5), 0 0 160px rgba(0,255,136,.25); }
+}
+
+/* Title text */
+.splash-title {
+  font-size:clamp(30px,5vw,52px); font-weight:900; color:#00ff88;
+  text-shadow: 0 0 30px rgba(0,255,136,.6), 0 0 60px rgba(0,255,136,.3);
+  margin-top:30px; opacity:0; text-align:center;
+  animation: textSlideUp 0.8s ease-out 0.6s forwards;
+}
+.splash-subtitle {
+  font-size:clamp(14px,2.2vw,22px); color:#ffdd00;
+  text-shadow: 0 0 20px rgba(255,221,0,.4);
+  margin-top:8px; opacity:0; text-align:center;
+  animation: textSlideUp 0.8s ease-out 0.9s forwards;
+}
+.splash-credit {
+  font-size:clamp(13px,1.8vw,18px); color:#aaa;
+  margin-top:24px; opacity:0; text-align:center;
+  animation: textSlideUp 0.8s ease-out 1.3s forwards;
+}
+.splash-credit span {
+  color:#00ccff; font-weight:bold;
+  text-shadow: 0 0 12px rgba(0,204,255,.4);
+}
+@keyframes textSlideUp {
+  0% { opacity:0; transform:translateY(25px); }
+  100% { opacity:1; transform:translateY(0); }
+}
+
+/* Animated missiles in background */
+.splash-missile {
+  position:absolute; font-size:28px; opacity:0;
+  animation: missileTrail 2.5s linear infinite;
+}
+.splash-missile:nth-child(1) { left:10%; animation-delay:0.5s; }
+.splash-missile:nth-child(2) { left:30%; animation-delay:1.2s; }
+.splash-missile:nth-child(3) { right:15%; animation-delay:0.8s; }
+.splash-missile:nth-child(4) { right:35%; animation-delay:1.6s; }
+@keyframes missileTrail {
+  0%   { top:-5%; opacity:0; transform:rotate(160deg); }
+  15%  { opacity:0.7; }
+  85%  { opacity:0.7; }
+  100% { top:75%; opacity:0; transform:rotate(160deg); }
+}
+
+/* Interceptor lines */
+.splash-intercept {
+  position:absolute; bottom:25%; width:2px; height:0;
+  background:linear-gradient(to top, transparent, #00ff88);
+  opacity:0;
+}
+.splash-intercept:nth-child(5) { left:12%; animation: interceptShoot 1.5s ease-out 1.8s forwards; }
+.splash-intercept:nth-child(6) { left:31%; animation: interceptShoot 1.5s ease-out 2.3s forwards; }
+.splash-intercept:nth-child(7) { right:16%; animation: interceptShoot 1.5s ease-out 2.0s forwards; }
+.splash-intercept:nth-child(8) { right:36%; animation: interceptShoot 1.5s ease-out 2.5s forwards; }
+@keyframes interceptShoot {
+  0%   { height:0; opacity:0; }
+  30%  { height:100px; opacity:1; }
+  60%  { height:100px; opacity:1; }
+  100% { height:100px; opacity:0; }
+}
+
+/* Particle stars */
+.splash-star {
+  position:absolute; width:2px; height:2px; background:#fff; border-radius:50%;
+  animation: twinkle 3s ease-in-out infinite;
+}
+@keyframes twinkle {
+  0%,100% { opacity:0.2; }
+  50% { opacity:0.8; }
+}
+
 #answerPanel {
   position:fixed; bottom:22px; left:50%; transform:translateX(-50%);
   display:none; align-items:center; gap:18px;
@@ -429,6 +537,39 @@ canvas { display:block; }
 </style>
 </head>
 <body>
+
+<!-- ══ SPLASH SCREEN ══ -->
+<div id="splash">
+  <!-- Background stars -->
+  <div class="splash-star" style="top:8%;left:5%"></div>
+  <div class="splash-star" style="top:15%;left:22%;animation-delay:.5s"></div>
+  <div class="splash-star" style="top:6%;left:45%;animation-delay:1.2s"></div>
+  <div class="splash-star" style="top:20%;left:68%;animation-delay:.3s"></div>
+  <div class="splash-star" style="top:12%;left:85%;animation-delay:.8s"></div>
+  <div class="splash-star" style="top:35%;left:92%;animation-delay:1.5s"></div>
+  <div class="splash-star" style="top:50%;left:4%;animation-delay:.7s"></div>
+  <div class="splash-star" style="top:70%;left:15%;animation-delay:1.1s"></div>
+  <div class="splash-star" style="top:80%;left:78%;animation-delay:.4s"></div>
+  <div class="splash-star" style="top:65%;left:55%;animation-delay:1.8s"></div>
+  <div class="splash-star" style="top:42%;left:38%;animation-delay:.9s"></div>
+  <div class="splash-star" style="top:88%;left:42%;animation-delay:1.4s"></div>
+  <!-- Falling missiles -->
+  <div class="splash-missile">🚀</div>
+  <div class="splash-missile">🚀</div>
+  <div class="splash-missile">🚀</div>
+  <div class="splash-missile">🚀</div>
+  <!-- Interceptor beams -->
+  <div class="splash-intercept"></div>
+  <div class="splash-intercept"></div>
+  <div class="splash-intercept"></div>
+  <div class="splash-intercept"></div>
+  <!-- Center content -->
+  <div class="splash-dome"></div>
+  <div class="splash-title">כיפת ברזל מתמטית</div>
+  <div class="splash-subtitle">🧮 הגן על ישראל עם כוח המתמטיקה!</div>
+  <div class="splash-credit">פותח על ידי <span>אופק ואורן ציזאנה</span>!</div>
+</div>
+
 <a href="index.html" id="backBtn">🏠 חזרה לתפריט</a>
 <button id="encBtn">📖 אנציקלופדיה</button>
 <button id="shopBtn">🛒 חנות</button>
@@ -1176,6 +1317,7 @@ function showMenu(){
   overlay.style.display='flex';
   overlay.innerHTML=`
     <h1>🛡️ כיפת ברזל מתמטית</h1>
+    <p style="color:#00ccff;font-size:clamp(14px,2vw,19px);margin-bottom:2px">פותח על ידי <b>אופק ואורן ציזאנה</b></p>
     <p>בחר רמת קושי ועצור את הטילים! כל תשובה נכונה מיירטת טיל.</p>
     <div class="grade-grid">
       <button class="grade-btn" data-g="gan">🌱 גן<small>חיבור וחיסור עד 10</small></button>
@@ -1240,6 +1382,7 @@ function showGameOver(win=false){
   overlay.style.display='flex';
   overlay.innerHTML=`
     <h2 style="color:${win?'#00ff88':'#ff4444'}">${win?'🏅 ניצחת! עברת את כל השלבים!':'💥 המשחק נגמר!'}</h2>
+    <p style="color:#00ccff;font-size:clamp(13px,1.8vw,17px);margin-bottom:2px">פותח על ידי <b>אופק ואורן ציזאנה</b></p>
     <p>ניקוד סופי: <span style="color:#ffdd00;font-size:28px">${score.toLocaleString()}</span></p>
     <p style="color:#aaa">הגעת לשלב ${levelDef?.id||1} (${levelDef?.name||''}) • ${grade?.label||''}</p>
     ${qualified?`<div id="nameArea" style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:4px">
@@ -2305,7 +2448,21 @@ if('ontouchstart' in window || navigator.maxTouchPoints > 0){
     o.classList.toggle('active', o.dataset.mode === 'choice'));
 }
 
-showMenu();
+// ── Splash screen: show for 3.5s then fade into menu ──
+(function(){
+  var sp = document.getElementById('splash');
+  if(!sp) { showMenu(); return; }
+  // Hide game overlay while splash is visible
+  var ov = document.getElementById('overlay');
+  if(ov) ov.style.display = 'none';
+  setTimeout(function(){
+    sp.classList.add('fade-out');
+    setTimeout(function(){
+      sp.remove();
+      showMenu();
+    }, 800);
+  }, 3500);
+})();
 
 // ══════════════════════════════════════════════════════
 //  AUDIO
